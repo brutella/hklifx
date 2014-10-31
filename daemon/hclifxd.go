@@ -9,6 +9,7 @@ import (
     "github.com/brutella/hap/server"
     "github.com/brutella/hap/model/accessory"
     "github.com/brutella/hap/model"
+    "math"
 )
 
 func ConnectLIFX() {    
@@ -46,7 +47,7 @@ func updateBulb(bulb *lifx.Bulb) {
     acc.SetOn(on)
 }
 
-func accessoryForBulb(bulb *lifx.Bulb)model.Switch {
+func accessoryForBulb(bulb *lifx.Bulb)model.LightBulb {
     label := bulb.GetLabel()
     switch_service, found := switches[label]
     if found == true {
@@ -62,7 +63,7 @@ func accessoryForBulb(bulb *lifx.Bulb)model.Switch {
         Model: "LIFX",
     }
     
-    sw := accessory.NewSwitch(info)
+    sw := accessory.NewLightBulb(info)
     sw.OnStateChanged(func(on bool) {
         if on == true {
             client.LightOn(bulb)
@@ -73,6 +74,12 @@ func accessoryForBulb(bulb *lifx.Bulb)model.Switch {
         }
     })
     
+    sw.OnBrightnessChanged(func(value int) {
+        fmt.Println("Brightness", value)
+        
+        client.LightColour(bulb, uint16(sw.GetHue()), uint16(sw.GetSaturation()), math.MaxUint16, math.MaxUint16, math.MaxUint32)
+    })
+    
     application.AddAccessory(sw.Accessory)
     switches[label] = sw
     
@@ -80,11 +87,11 @@ func accessoryForBulb(bulb *lifx.Bulb)model.Switch {
 }
 
 var application *app.App
-var switches map[string]model.Switch
+var switches map[string]model.LightBulb
 var client *lifx.Client
 
 func main() {
-    switches = map[string]model.Switch{}
+    switches = map[string]model.LightBulb{}
     
     conf := app.NewConfig()
     conf.DatabaseDir = "./data"
