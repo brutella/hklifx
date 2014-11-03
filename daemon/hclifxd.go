@@ -12,6 +12,13 @@ import (
     "math"
 )
 
+const (
+    // from https://github.com/LIFX/LIFXKit/blob/master/LIFXKit/Classes-Common/LFXHSBKColor.h
+    HSBKKelvinDefault = uint16(3500)
+    HSBKKelvinMin = uint16(2500)
+    HSBKKelvinMax = uint16(9000)
+)
+
 func ConnectLIFX() {    
     client = lifx.NewClient()
     err := client.StartDiscovery()
@@ -49,9 +56,9 @@ func updateBulb(bulb *lifx.Bulb) {
 
 func accessoryForBulb(bulb *lifx.Bulb)model.LightBulb {
     label := bulb.GetLabel()
-    switch_service, found := switches[label]
+    light, found := lights[label]
     if found == true {
-        return switch_service
+        return light
     }
     
     fmt.Println("Create new switch for blub")
@@ -63,8 +70,8 @@ func accessoryForBulb(bulb *lifx.Bulb)model.LightBulb {
         Model: "LIFX",
     }
     
-    sw := accessory.NewLightBulb(info)
-    sw.OnStateChanged(func(on bool) {
+    light_bulb := accessory.NewLightBulb(info)
+    light_bulb.OnStateChanged(func(on bool) {
         if on == true {
             client.LightOn(bulb)
             fmt.Println("Switch is on")
@@ -74,32 +81,64 @@ func accessoryForBulb(bulb *lifx.Bulb)model.LightBulb {
         }
     })
     
-    sw.OnBrightnessChanged(func(value int) {
-        fmt.Println("Brightness", value)
+    updateColors := func (client *lifx.Client, bulb *lifx.Bulb) {
+        // TODO define max variables in Gohap
         
-        client.LightColour(bulb, uint16(sw.GetHue()), uint16(sw.GetSaturation()), math.MaxUint16, math.MaxUint16, math.MaxUint32)
+        // HAP: [0...360]
+        // LIFX: [0...MAX_UINT16]
+        hue := light_bulb.GetHue()
+        
+        // HAP: [0...100]
+        // LIFX: [0...MAX_UINT16]
+        saturation := light_bulb.GetSaturation()
+        // HAP: [0...100]
+        // LIFX: [0...MAX_UINT16]
+        brightness := light_bulb.GetBrightness()
+        // [2500..9000]
+        kelvin := HSBKKelvinDefault
+        
+        lifx_brightness := math.MaxUint16 * float64(brightness)/100
+        lifx_saturation := math.MaxUint16 * float64(saturation)/100
+        lifx_hue := math.MaxUint16 * float64(hue)/360
+        
+        fmt.Println("Brightness", lifx_brightness)
+        fmt.Println("Hue", lifx_saturation)
+        fmt.Println("Saturation", lifx_hue)
+        client.LightColour(bulb, uint16(lifx_hue), uint16(lifx_saturation), uint16(lifx_brightness), uint16(kelvin), 0x0500)
+    }
+    
+    light_bulb.OnBrightnessChanged(func(value int) {
+        updateColors(client, bulb)
     })
     
-    application.AddAccessory(sw.Accessory)
-    switches[label] = sw
+    light_bulb.OnSaturationChanged(func(value float64) {
+        updateColors(client, bulb)
+    })
     
-    return sw
+    light_bulb.OnHueChanged(func(value float64) {
+        updateColors(client, bulb)
+    })
+    
+    application.AddAccessory(light_bulb.Accessory)
+    lights[label] = light_bulb
+    
+    return light_bulb
 }
 
 var application *app.App
-var switches map[string]model.LightBulb
+var lights map[string]model.LightBulb
 var client *lifx.Client
 
 func main() {
-    switches = map[string]model.LightBulb{}
+    lights = map[string]model.LightBulb{}
     
     conf := app.NewConfig()
     conf.DatabaseDir = "./data"
-    conf.BridgeName = "TestBridge" // default "GoBridge"
+    conf.BridgeName = "TestBridge"
     
     pwd, _ := server.NewPassword("11122333")
-    conf.BridgePassword = pwd // default "001-02-003"
-    conf.BridgeManufacturer = "Matthias Hochgatterer" // default "brutella"
+    conf.BridgePassword = pwd
+    conf.BridgeManufacturer = "Matthias Hochgatterer"
     
     var err error
     application, err = app.NewApp(conf)
