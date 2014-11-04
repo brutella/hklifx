@@ -48,10 +48,24 @@ func updateBulb(bulb *lifx.Bulb) {
         on = false
     }
     
+    state := bulb.GetState()
+    
     acc := accessoryForBulb(bulb)
     
-    log.Println("LIFX is now", on)
     acc.SetOn(on)
+    
+    brightness := float64(state.Brightness)/float64(math.MaxUint16) * 100
+    saturation := float64(state.Saturation)/float64(math.MaxUint16) * 100
+    hue := float64(state.Hue)/float64(math.MaxUint16) * 360
+    
+    acc.SetBrightness(int(brightness))
+    acc.SetSaturation(saturation)
+    acc.SetHue(hue)
+    
+    log.Println("LIFX is now", on)
+    log.Println("Brightness", brightness)
+    log.Println("Saturation", saturation)
+    log.Println("Hue", hue)
 }
 
 func accessoryForBulb(bulb *lifx.Bulb)model.LightBulb {
@@ -134,7 +148,7 @@ func main() {
     
     conf := app.NewConfig()
     conf.DatabaseDir = "./data"
-    conf.BridgeName = "TestBridge"
+    conf.BridgeName = "LIFXBridge"
     
     pwd, _ := server.NewPassword("11122333")
     conf.BridgePassword = pwd
