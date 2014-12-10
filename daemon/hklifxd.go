@@ -50,17 +50,17 @@ func updateBulb(bulb *lifx.Bulb) {
     
     state := bulb.GetState()
     
-    acc := accessoryForBulb(bulb)
+    light_bulb := lightForBulb(bulb).bulb
     
-    acc.SetOn(on)
+    light_bulb.SetOn(on)
     
     brightness := float64(state.Brightness)/float64(math.MaxUint16) * 100
     saturation := float64(state.Saturation)/float64(math.MaxUint16) * 100
     hue := float64(state.Hue)/float64(math.MaxUint16) * 360
     
-    acc.SetBrightness(int(brightness))
-    acc.SetSaturation(saturation)
-    acc.SetHue(hue)
+    light_bulb.SetBrightness(int(brightness))
+    light_bulb.SetSaturation(saturation)
+    light_bulb.SetHue(hue)
     
     log.Println("LIFX is now", on)
     log.Println("Brightness", brightness)
@@ -68,7 +68,7 @@ func updateBulb(bulb *lifx.Bulb) {
     log.Println("Hue", hue)
 }
 
-func accessoryForBulb(bulb *lifx.Bulb)model.LightBulb {
+func lightForBulb(bulb *lifx.Bulb)*lifxLight {
     label := bulb.GetLabel()
     light, found := lights[label]
     if found == true {
@@ -134,17 +134,23 @@ func accessoryForBulb(bulb *lifx.Bulb)model.LightBulb {
     })
     
     application.AddAccessory(light_bulb.Accessory)
-    lights[label] = light_bulb
+    light = &lifxLight{light_bulb, light_bulb.Accessory}
+    lights[label] = light
     
-    return light_bulb
+    return light
+}
+
+type lifxLight struct {
+    bulb model.LightBulb
+    accessory *accessory.Accessory
 }
 
 var application *app.App
-var lights map[string]model.LightBulb
+var lights map[string]*lifxLight
 var client *lifx.Client
 
 func main() {
-    lights = map[string]model.LightBulb{}
+    lights = map[string]*lifxLight{}
     
     conf := app.NewConfig()
     conf.DatabaseDir = "./data"
