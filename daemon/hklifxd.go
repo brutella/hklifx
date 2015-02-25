@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/brutella/hap/app"
-	"github.com/brutella/hap/model"
-	"github.com/brutella/hap/model/accessory"
-	"github.com/brutella/hap/server"
+	"github.com/brutella/hc/hap"
+	"github.com/brutella/hc/model"
+	"github.com/brutella/hc/model/accessory"
+	"github.com/brutella/hc/server"
 	"github.com/wolfeidau/lifx"
 	"math"
 	"time"
@@ -166,14 +166,14 @@ type lifxLight struct {
 	accessory *accessory.Accessory
 }
 
-var application *app.App
+var application *hap.App
 var lights map[string]*lifxLight
 var client *lifx.Client
 
 func main() {
 	lights = map[string]*lifxLight{}
 
-	conf := app.NewConfig()
+	conf := hap.NewConfig()
 	conf.DatabaseDir = "./data"
 	conf.BridgeName = "LIFXBridge"
 
@@ -182,7 +182,7 @@ func main() {
 	conf.BridgeManufacturer = "Matthias Hochgatterer"
 
 	var err error
-	application, err = app.NewApp(conf)
+	application, err = hap.NewApp(conf)
 	if err != nil {
 		log.Fatal(err)
 	}
