@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/brutella/hc/hap"
 	"github.com/brutella/hc/model"
 	"github.com/brutella/hc/model/accessory"
-	"github.com/brutella/hc/server"
 	"github.com/wolfeidau/lifx"
 	"math"
 	"time"
@@ -28,19 +28,21 @@ func ConnectLIFX() {
 		log.Fatalf("Could not find bulb %s", err)
 	}
 
-	go func() {
-		sub := client.Subscribe()
-		for {
-			event := <-sub.Events
-			switch event := event.(type) {
-			case *lifx.Gateway:
-			case *lifx.Bulb:
+	sub := client.Subscribe()
+	for {
+		event := <-sub.Events
+		switch event := event.(type) {
+		case *lifx.Gateway:
+		case *lifx.Bulb:
+			updateBulb(event)
+			event.SetStateHandler(func(newState *lifx.BulbState) {
+				log.Println("Updated", newState)
 				updateBulb(event)
-			default:
-				log.Printf("Event %v", event)
-			}
+			})
+		default:
+			log.Printf("Event %v", event)
 		}
-	}()
+	}
 }
 
 func updateBulb(bulb *lifx.Bulb) {
@@ -50,6 +52,13 @@ func updateBulb(bulb *lifx.Bulb) {
 	}
 
 	state := bulb.GetState()
+
+	name := bulb.GetLabel()
+	if light, found := lights[name]; found == true && state.Visible == false {
+		log.Printf("Remove light", light)
+		removeLight(light, name)
+		return
+	}
 
 	light_bulb := lightForBulb(bulb).bulb
 
@@ -76,22 +85,24 @@ func toggleBulb(bulb *lifx.Bulb) {
 		client.LightOff(bulb)
 	}
 }
+func removeLight(light *lifxLight, name string) {
+	light.transport.Stop()
+	delete(lights, name)
+}
 
 func lightForBulb(bulb *lifx.Bulb) *lifxLight {
 	label := bulb.GetLabel()
 	light, found := lights[label]
 	if found == true {
+		fmt.Println("Found")
 		return light
 	}
 
 	fmt.Println("Create new switch for blub")
-	application.SetReachable(true)
 
 	info := model.Info{
 		Name:         label,
-		SerialNumber: "001",
 		Manufacturer: "LIFX",
-		Model:        "LIFX",
 	}
 
 	light_bulb := accessory.NewLightBulb(info)
@@ -143,51 +154,54 @@ func lightForBulb(bulb *lifx.Bulb) *lifxLight {
 	}
 
 	light_bulb.OnBrightnessChanged(func(value int) {
+		log.Println("Brightness", value)
 		updateColors(client, bulb)
 	})
 
 	light_bulb.OnSaturationChanged(func(value float64) {
+		log.Println("Saturation", value)
 		updateColors(client, bulb)
 	})
 
 	light_bulb.OnHueChanged(func(value float64) {
+		log.Println("Hue", value)
 		updateColors(client, bulb)
 	})
 
-	application.AddAccessory(light_bulb.Accessory)
-	light = &lifxLight{light_bulb, light_bulb.Accessory}
+	transport, err := hap.NewIPTransport("00102003", light_bulb.Accessory)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	go func() {
+		transport.Start()
+	}()
+
+	light = &lifxLight{transport, light_bulb, light_bulb.Accessory}
 	lights[label] = light
 
 	return light
 }
 
 type lifxLight struct {
+	transport hap.Transport
 	bulb      model.LightBulb
 	accessory *accessory.Accessory
 }
 
-var application *hap.App
 var lights map[string]*lifxLight
 var client *lifx.Client
 
 func main() {
 	lights = map[string]*lifxLight{}
 
-	conf := hap.NewConfig()
-	conf.DatabaseDir = "./data"
-	conf.BridgeName = "LIFXBridge"
-
-	pwd, _ := server.NewPassword("11122333")
-	conf.BridgePassword = pwd
-	conf.BridgeManufacturer = "Matthias Hochgatterer"
-
-	var err error
-	application, err = hap.NewApp(conf)
-	if err != nil {
-		log.Fatal(err)
-	}
+	hap.OnTermination(func() {
+		for _, l := range lights {
+			l.transport.Stop()
+		}
+		time.Sleep(100 * time.Millisecond)
+		os.Exit(1)
+	})
 
 	ConnectLIFX()
-
-	application.RunAndPublish(false)
 }
