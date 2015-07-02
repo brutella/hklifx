@@ -22,14 +22,15 @@ You need to provide the accessory pin as argument when running the `hklifxd` dae
 
     hklifxd -pin=32112321
 
+## HomeKit Client
 
-## iOS
+You need an iOS app to control HomeKit accessories. 
+You can use [Home][home] which runs on iPhone, iPad and Apple Watch.
 
-You need an iOS app to access HomeKit accessories. You can use [Home][home] which runs on iPhone, iPad and Apple Watch.
+Read the [Getting Started][home-getting-started] guide.
 
-When you pair the accessory with HomeKit using an app, you have to enter the 8-digit pin (see *pin* argument).
-
-[home]: http://selfcoded.com/home
+[home]: http://selfcoded.com/home/
+[home-getting-started]: http://selfcoded.com/home/getting-started/
 
 # Contact
 
