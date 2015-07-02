@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -86,6 +87,8 @@ func toggleBulb(bulb *lifx.Bulb) {
 	}
 }
 func removeLight(light *lifxLight, name string) {
+	// TODO remove
+	return
 	light.transport.Stop()
 	delete(lights, name)
 }
@@ -168,7 +171,7 @@ func lightForBulb(bulb *lifx.Bulb) *lifxLight {
 		updateColors(client, bulb)
 	})
 
-	transport, err := hap.NewIPTransport("00102003", light_bulb.Accessory)
+	transport, err := hap.NewIPTransport(pin, light_bulb.Accessory)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -191,8 +194,16 @@ type lifxLight struct {
 
 var lights map[string]*lifxLight
 var client *lifx.Client
+var pin string
 
 func main() {
+	var (
+		pinArg = flag.String("pin", "", "Accessory pin required for pairing")
+	)
+
+	flag.Parse()
+	pin = *pinArg
+
 	lights = map[string]*lifxLight{}
 
 	hap.OnTermination(func() {
