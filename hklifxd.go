@@ -87,8 +87,6 @@ func toggleBulb(bulb *lifx.Bulb) {
 	}
 }
 func removeLight(light *lifxLight, name string) {
-	// TODO remove
-	return
 	light.transport.Stop()
 	delete(lights, name)
 }
