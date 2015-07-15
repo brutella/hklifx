@@ -198,7 +198,7 @@ var pin string
 
 func main() {
 	var (
-		pinArg = flag.String("pin", "", "Accessory pin required for pairing")
+		pinArg = flag.String("pin", "", "Accessory pin used for pairing")
 	)
 
 	flag.Parse()
