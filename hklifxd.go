@@ -2,10 +2,11 @@ package main
 
 import (
 	"flag"
-	"log"
 	"math"
 	"os"
 	"time"
+
+	"github.com/brutella/log"
 
 	"github.com/brutella/hc/hap"
 	"github.com/brutella/hc/model"
@@ -34,8 +35,6 @@ type HKLight struct {
 var (
 	lights map[uint64] *HKLight
 	pin string
-
-	client *golifx.Client
 )
 
 func Connect() {
@@ -222,8 +221,15 @@ func main() {
 	lights = map[uint64]*HKLight{}
 
 	pinArg := flag.String("pin", "", "PIN used to pair the LIFX bulbs with HomeKit")
+	verboseArg := flag.Bool("v", false, "Whether or not log output is displayed")
+
 	flag.Parse()
+
 	pin = *pinArg
+
+	if !*verboseArg {
+		log.Info = false
+	}
 
 	hap.OnTermination(func() {
 		for _, light := range lights {
