@@ -43,6 +43,8 @@ func Connect() {
 		log.Fatalf("[ERR] Failed to initiliaze the client: %s", err)
 	}
 
+	client.SetDiscoveryInterval(5 * time.Second)
+
 	sub, _ := client.NewSubscription()
 	for {
 		event := <-sub.Events()
