@@ -11,6 +11,7 @@ import (
 	"github.com/brutella/hc/hap"
 	"github.com/brutella/hc/model"
 	"github.com/brutella/hc/model/accessory"
+	"github.com/brutella/hc/model/characteristic"
 
 	"github.com/pdf/golifx"
 	"github.com/pdf/golifx/common"
@@ -96,9 +97,9 @@ func NewDevice(device common.Device) {
 					// TODO Define max variables in HomeControl
 					color := event.(common.EventUpdateColor).Color
 
-					hue := float64(color.Hue) / float64(math.MaxUint16) * 360
-					saturation := float64(color.Saturation) / float64(math.MaxUint16) * 100
-					brightness := float64(color.Brightness) / float64(math.MaxUint16) * 100
+					hue := float64(color.Hue) / float64(math.MaxUint16) * float64(characteristic.MaxHue)
+					saturation := float64(color.Saturation) / float64(math.MaxUint16) * float64(characteristic.MaxSaturation)
+					brightness := float64(color.Brightness) / float64(math.MaxUint16) * float64(characteristic.MaxBrightness)
 
 					hkLight.light.SetBrightness(int(brightness))
 					hkLight.light.SetSaturation(saturation)
@@ -172,9 +173,9 @@ func GetHKLight(light common.Light) *HKLight {
 		kelvin := HSBKKelvinDefault
 
 		// TODO Define max variables in HomeControl
-		lifxHue := math.MaxUint16 * float64(hue) / 360
-		lifxSaturation := math.MaxUint16 * float64(saturation) / 100
-		lifxBrightness := math.MaxUint16 * float64(brightness) / 100
+		lifxHue := math.MaxUint16 * float64(hue) / float64(characteristic.MaxHue)
+		lifxSaturation := math.MaxUint16 * float64(saturation) / float64(characteristic.MaxSaturation)
+		lifxBrightness := math.MaxUint16 * float64(brightness) / float64(characteristic.MaxBrightness)
 
 		color := common.Color{
 			uint16(lifxHue),
