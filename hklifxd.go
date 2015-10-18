@@ -94,7 +94,6 @@ func NewDevice(device common.Device) {
 				case common.EventUpdateColor:
 					log.Printf("[INFO] Updated Color for %s", hkLight.accessory.Name())
 
-					// TODO Define max variables in HomeControl
 					color := event.(common.EventUpdateColor).Color
 
 					hue := float64(color.Hue) / float64(math.MaxUint16) * float64(characteristic.MaxHue)
@@ -172,7 +171,6 @@ func GetHKLight(light common.Light) *HKLight {
 		// [HSBKKelvinMin..HSBKKelvinMax]
 		kelvin := HSBKKelvinDefault
 
-		// TODO Define max variables in HomeControl
 		lifxHue := math.MaxUint16 * float64(hue) / float64(characteristic.MaxHue)
 		lifxSaturation := math.MaxUint16 * float64(saturation) / float64(characteristic.MaxSaturation)
 		lifxBrightness := math.MaxUint16 * float64(brightness) / float64(characteristic.MaxBrightness)
