@@ -90,19 +90,16 @@ func NewDevice(device common.Device) {
 					log.Printf("[INFO] Unsupported by HomeControl")
 				case common.EventUpdatePower:
 					log.Printf("[INFO] Updated Power for %s", hkLight.accessory.Name())
-					hkLight.light.SetOn(event.(common.EventUpdatePower).Power)
+					hkLight.light.SetOn(device.(common.Light).CachedPower())
 				case common.EventUpdateColor:
 					log.Printf("[INFO] Updated Color for %s", hkLight.accessory.Name())
 
-					color := event.(common.EventUpdateColor).Color
+					hue, saturation, brightness := ConvertLIFXColor(device.(common.Light).CachedColor())
 
-					hue := float64(color.Hue) / float64(math.MaxUint16) * float64(characteristic.MaxHue)
-					saturation := float64(color.Saturation) / float64(math.MaxUint16) * float64(characteristic.MaxSaturation)
-					brightness := float64(color.Brightness) / float64(math.MaxUint16) * float64(characteristic.MaxBrightness)
-
-					hkLight.light.SetBrightness(int(brightness))
-					hkLight.light.SetSaturation(saturation)
 					hkLight.light.SetHue(hue)
+					hkLight.light.SetSaturation(saturation)
+					hkLight.light.SetBrightness(int(brightness))
+
 
 				default:
 					log.Printf("[INFO] Unknown Device Event: %T", event)
@@ -140,6 +137,16 @@ func GetHKLight(light common.Light) *HKLight {
 	}
 
 	lightBulb := accessory.NewLightBulb(info)
+
+	power, _ := light.GetPower()
+	lightBulb.SetOn(power)
+
+	color, _ := light.GetColor()
+	hue, saturation, brightness := ConvertLIFXColor(color)
+
+	lightBulb.SetBrightness(int(brightness))
+	lightBulb.SetSaturation(saturation)
+	lightBulb.SetHue(hue)
 
 	lightBulb.OnIdentify(func() {
 		timeout := 1 * time.Second
@@ -211,6 +218,14 @@ func GetHKLight(light common.Light) *HKLight {
 
 	hkLight = &HKLight{lightBulb.Accessory, nil, transport, lightBulb}
 	return hkLight
+}
+
+func ConvertLIFXColor(color common.Color) (float64, float64, float64) {
+	hue := float64(color.Hue) / float64(math.MaxUint16) * float64(characteristic.MaxHue)
+	saturation := float64(color.Saturation) / float64(math.MaxUint16) * float64(characteristic.MaxSaturation)
+	brightness := float64(color.Brightness) / float64(math.MaxUint16) * float64(characteristic.MaxBrightness)
+
+	return hue, saturation, brightness
 }
 
 func ToggleLight(light common.Light) {
