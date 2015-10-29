@@ -70,7 +70,7 @@ func Connect() {
 				label, _ := event.(common.EventExpiredDevice).Device.GetLabel()
 				log.Printf("[INFO] Expired Device %s", label)
 
-				ExpireDevice(event.(common.EventNewDevice).Device)
+				ExpireDevice(event.(common.EventExpiredDevice).Device)
 
 			default:
 				log.Printf("[INFO] Unknown Client Event: %T", event)
