@@ -21,21 +21,21 @@ import (
 const (
 	// from https://github.com/LIFX/LIFXKit/blob/master/LIFXKit/Classes-Common/LFXHSBKColor.h
 	HSBKKelvinDefault = uint16(3500)
-	HSBKKelvinMin = uint16(2500)
-	HSBKKelvinMax = uint16(9000)
+	HSBKKelvinMin     = uint16(2500)
+	HSBKKelvinMax     = uint16(9000)
 )
 
 type HKLight struct {
 	accessory *accessory.Accessory
-	sub *common.Subscription
+	sub       *common.Subscription
 	transport hap.Transport
 
 	light model.LightBulb
 }
 
 var (
-	lights map[uint64] *HKLight
-	pin string
+	lights map[uint64]*HKLight
+	pin    string
 )
 
 func Connect() {
@@ -50,28 +50,28 @@ func Connect() {
 	for {
 		event := <-sub.Events()
 		switch event.(type) {
-			case common.EventNewLocation:
-				log.Printf("[INFO] Discovered Location %s", event.(common.EventNewLocation).Location.GetLabel())
-			case common.EventNewGroup:
-				log.Printf("[INFO] Discovered Group %s", event.(common.EventNewGroup).Group.GetLabel())
-			case common.EventNewDevice:
-				label, _ := event.(common.EventNewDevice).Device.GetLabel()
-				log.Printf("[INFO] Discovered Device %s", label)
+		case common.EventNewLocation:
+			log.Printf("[INFO] Discovered Location %s", event.(common.EventNewLocation).Location.GetLabel())
+		case common.EventNewGroup:
+			log.Printf("[INFO] Discovered Group %s", event.(common.EventNewGroup).Group.GetLabel())
+		case common.EventNewDevice:
+			label, _ := event.(common.EventNewDevice).Device.GetLabel()
+			log.Printf("[INFO] Discovered Device %s", label)
 
-				go NewDevice(event.(common.EventNewDevice).Device)
+			go NewDevice(event.(common.EventNewDevice).Device)
 
-			case common.EventExpiredLocation:
-				log.Printf("[INFO] Expired Location %s", event.(common.EventExpiredLocation).Location.GetLabel())
-			case common.EventExpiredGroup:
-				log.Printf("[INFO] Expired Group %s", event.(common.EventExpiredGroup).Group.GetLabel())
-			case common.EventExpiredDevice:
-				label, _ := event.(common.EventExpiredDevice).Device.GetLabel()
-				log.Printf("[INFO] Expired Device %s", label)
+		case common.EventExpiredLocation:
+			log.Printf("[INFO] Expired Location %s", event.(common.EventExpiredLocation).Location.GetLabel())
+		case common.EventExpiredGroup:
+			log.Printf("[INFO] Expired Group %s", event.(common.EventExpiredGroup).Group.GetLabel())
+		case common.EventExpiredDevice:
+			label, _ := event.(common.EventExpiredDevice).Device.GetLabel()
+			log.Printf("[INFO] Expired Device %s", label)
 
-				ExpireDevice(event.(common.EventExpiredDevice).Device)
+			ExpireDevice(event.(common.EventExpiredDevice).Device)
 
-			default:
-				log.Printf("[INFO] Unknown Client Event: %T", event)
+		default:
+			log.Printf("[INFO] Unknown Client Event: %T", event)
 		}
 	}
 }
@@ -84,24 +84,24 @@ func NewDevice(device common.Device) {
 		for {
 			event := <-hkLight.sub.Events()
 			switch event.(type) {
-				case common.EventUpdateLabel:
-					log.Printf("[INFO] Updated Label for %s to %s", hkLight.accessory.Name(), event.(common.EventUpdateLabel).Label)
-					// TODO Add support for label changes to HomeControl
-					log.Printf("[INFO] Unsupported by HomeControl")
-				case common.EventUpdatePower:
-					log.Printf("[INFO] Updated Power for %s", hkLight.accessory.Name())
-					hkLight.light.SetOn(event.(common.EventUpdatePower).Power)
-				case common.EventUpdateColor:
-					log.Printf("[INFO] Updated Color for %s", hkLight.accessory.Name())
+			case common.EventUpdateLabel:
+				log.Printf("[INFO] Updated Label for %s to %s", hkLight.accessory.Name(), event.(common.EventUpdateLabel).Label)
+				// TODO Add support for label changes to HomeControl
+				log.Printf("[INFO] Unsupported by HomeControl")
+			case common.EventUpdatePower:
+				log.Printf("[INFO] Updated Power for %s", hkLight.accessory.Name())
+				hkLight.light.SetOn(event.(common.EventUpdatePower).Power)
+			case common.EventUpdateColor:
+				log.Printf("[INFO] Updated Color for %s", hkLight.accessory.Name())
 
-					hue, saturation, brightness := ConvertLIFXColor(event.(common.EventUpdateColor).Color)
+				hue, saturation, brightness := ConvertLIFXColor(event.(common.EventUpdateColor).Color)
 
-					hkLight.light.SetHue(hue)
-					hkLight.light.SetSaturation(saturation)
-					hkLight.light.SetBrightness(int(brightness))
+				hkLight.light.SetHue(hue)
+				hkLight.light.SetSaturation(saturation)
+				hkLight.light.SetBrightness(int(brightness))
 
-				default:
-					log.Printf("[INFO] Unknown Device Event: %T", event)
+			default:
+				log.Printf("[INFO] Unknown Device Event: %T", event)
 			}
 		}
 	} else {
@@ -164,7 +164,7 @@ func GetHKLight(light common.Light) *HKLight {
 		for i := 0; i < 4; i++ {
 			ToggleLight(light)
 			time.Sleep(timeout)
-    	}
+		}
 	})
 
 	lightBulb.OnStateChanged(func(power bool) {
@@ -199,7 +199,7 @@ func GetHKLight(light common.Light) *HKLight {
 			kelvin,
 		}
 
-		light.SetColor(color, 500 * time.Millisecond)
+		light.SetColor(color, 500*time.Millisecond)
 	}
 
 	lightBulb.OnHueChanged(func(value float64) {
