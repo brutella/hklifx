@@ -31,8 +31,6 @@ type HKLight struct {
 	transport hap.Transport
 
 	light model.LightBulb
-
-	UseCache bool
 }
 
 var (
@@ -92,24 +90,11 @@ func NewDevice(device common.Device) {
 					log.Printf("[INFO] Unsupported by HomeControl")
 				case common.EventUpdatePower:
 					log.Printf("[INFO] Updated Power for %s", hkLight.accessory.Name())
-
-					power := event.(common.EventUpdatePower).Power
-					if (hkLight.UseCache) {
-						power = device.(common.Light).CachedPower()
-						hkLight.UseCache = false
-					}
-
-					hkLight.light.SetOn(power)
+					hkLight.light.SetOn(event.(common.EventUpdatePower).Power)
 				case common.EventUpdateColor:
 					log.Printf("[INFO] Updated Color for %s", hkLight.accessory.Name())
 
-					color := event.(common.EventUpdateColor).Color
-					if (hkLight.UseCache) {
-						color = device.(common.Light).CachedColor()
-						hkLight.UseCache = false
-					}
-
-					hue, saturation, brightness := ConvertLIFXColor(color)
+					hue, saturation, brightness := ConvertLIFXColor(event.(common.EventUpdateColor).Color)
 
 					hkLight.light.SetHue(hue)
 					hkLight.light.SetSaturation(saturation)
@@ -171,7 +156,7 @@ func GetHKLight(light common.Light) *HKLight {
 		transport.Start()
 	}()
 
-	hkLight = &HKLight{lightBulb.Accessory, nil, transport, lightBulb, false}
+	hkLight = &HKLight{lightBulb.Accessory, nil, transport, lightBulb}
 
 	lightBulb.OnIdentify(func() {
 		timeout := 1 * time.Second
@@ -184,9 +169,7 @@ func GetHKLight(light common.Light) *HKLight {
 
 	lightBulb.OnStateChanged(func(power bool) {
 		log.Printf("[INFO] Changed State for %s", label)
-
 		light.SetPower(power)
-		hkLight.UseCache = true
 	})
 
 	updateColor := func(light common.Light) {
@@ -221,23 +204,17 @@ func GetHKLight(light common.Light) *HKLight {
 
 	lightBulb.OnHueChanged(func(value float64) {
 		log.Printf("[INFO] Changed Hue for %s to %d", label, value)
-
 		updateColor(light)
-		hkLight.UseCache = true
 	})
 
 	lightBulb.OnSaturationChanged(func(value float64) {
 		log.Printf("[INFO] Changed Saturation for %s to %d", label, value)
-
 		updateColor(light)
-		hkLight.UseCache = true
 	})
 
 	lightBulb.OnBrightnessChanged(func(value int) {
 		log.Printf("[INFO] Changed Brightness for %s to %d", label, value)
-
 		updateColor(light)
-		hkLight.UseCache = true
 	})
 
 	return hkLight
