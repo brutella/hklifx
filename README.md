@@ -1,8 +1,6 @@
 # hklifx
 
-This project is an implementation of a HomeKit bridge for [LIFX](http://www.lifx.com) light bulbs using [HomeControl](https://github.com/brutella/hc) and [lifx](https://github.com/wolfeidau/lifx).
-
-*The currently version does not support the latest LIFX firmware 2.0.*
+This project is an implementation of a HomeKit bridge for [LIFX](http://www.lifx.com) light bulbs using [HomeControl](https://github.com/brutella/hc) and ~~[lifx](https://github.com/wolfeidau/lifx)~~ [golifx](https://github.com/pdf/golifx).
 
 The official [LIFX app](http://www.lifx.com/pages/go) for iOS or Android is required to initially setup the light bulbs. After that you can use the `hklifxd` daemon to control your lights via HomeKit by using [Home][home] or any other HomeKit-compatible app.
 
