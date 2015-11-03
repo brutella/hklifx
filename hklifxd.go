@@ -157,6 +157,7 @@ func GetHKLight(light common.Light) *HKLight {
 	}()
 
 	hkLight = &HKLight{lightBulb.Accessory, nil, transport, lightBulb}
+	lights[light.ID()] = hkLight
 
 	lightBulb.OnIdentify(func() {
 		timeout := 1 * time.Second
