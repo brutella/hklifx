@@ -34,8 +34,9 @@ type HKLight struct {
 }
 
 var (
-	lights map[uint64]*HKLight
-	pin    string
+	lights             map[uint64]*HKLight
+	pin                string
+	transitionDuration time.Duration
 )
 
 func Connect() {
@@ -170,7 +171,7 @@ func GetHKLight(light common.Light) *HKLight {
 
 	lightBulb.OnStateChanged(func(power bool) {
 		log.Printf("[INFO] Changed State for %s", label)
-		light.SetPower(power)
+		light.SetPowerDuration(power, transitionDuration)
 	})
 
 	updateColor := func(light common.Light) {
@@ -200,7 +201,7 @@ func GetHKLight(light common.Light) *HKLight {
 			kelvin,
 		}
 
-		light.SetColor(color, 500*time.Millisecond)
+		light.SetColor(color, transitionDuration)
 	}
 
 	lightBulb.OnHueChanged(func(value float64) {
@@ -239,6 +240,7 @@ func main() {
 
 	pinArg := flag.String("pin", "", "PIN used to pair the LIFX bulbs with HomeKit")
 	verboseArg := flag.Bool("v", false, "Whether or not log output is displayed")
+	transitionArg := flag.Float64("transition-duration", 1, "Transition time in seconds")
 
 	flag.Parse()
 
@@ -248,6 +250,8 @@ func main() {
 		log.Info = false
 		log.Verbose = false
 	}
+
+	transitionDuration = time.Duration(*transitionArg) * time.Second
 
 	hap.OnTermination(func() {
 		for _, light := range lights {
