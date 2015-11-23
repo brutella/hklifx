@@ -112,11 +112,12 @@ func NewDevice(device common.Device) {
 
 func ExpireDevice(device common.Device) {
 	if light, ok := device.(common.Light); ok {
-		hkLight, _ := lights[light.ID()]
-		light.CloseSubscription(hkLight.sub)
-		hkLight.transport.Stop()
+		if hkLight, found := lights[light.ID()]; found == true {
+			light.CloseSubscription(hkLight.sub)
+			hkLight.transport.Stop()
 
-		delete(lights, light.ID())
+			delete(lights, light.ID())
+		}
 	} else {
 		log.Println("[INFO] Unsupported Device")
 	}
@@ -148,7 +149,8 @@ func GetHKLight(light common.Light) *HKLight {
 	lightBulb.SetSaturation(saturation)
 	lightBulb.SetHue(hue)
 
-	transport, err := hap.NewIPTransport(pin, lightBulb.Accessory)
+	config := hap.Config{Pin: pin}
+	transport, err := hap.NewIPTransport(config, lightBulb.Accessory)
 	if err != nil {
 		log.Fatal(err)
 	}
