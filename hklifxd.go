@@ -180,6 +180,8 @@ func GetHKLight(light common.Light) *HKLight {
 	})
 
 	updateColor := func(light common.Light) {
+		currentPower, _ := light.GetPower()
+
 		// HAP: [0...360]
 		// LIFX: [0...MAX_UINT16]
 		hue := lightBulb.GetHue()
@@ -207,6 +209,11 @@ func GetHKLight(light common.Light) *HKLight {
 		}
 
 		light.SetColor(color, transitionDuration)
+
+		if (brightness > 0 && !currentPower) {
+			log.Printf("[INFO] Color changed for %s, turning on power.", label)
+			light.SetPowerDuration(true, transitionDuration)
+		}
 	}
 
 	lightBulb.OnHueChanged(func(value float64) {
