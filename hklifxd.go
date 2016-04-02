@@ -16,6 +16,7 @@ import (
 	"github.com/pdf/golifx"
 	"github.com/pdf/golifx/common"
 	"github.com/pdf/golifx/protocol"
+	"github.com/pdf/golifx/protocol/v2/shared"
 )
 
 const (
@@ -100,6 +101,8 @@ func NewDevice(device common.Device) {
 				hkLight.light.SetHue(hue)
 				hkLight.light.SetSaturation(saturation)
 				hkLight.light.SetBrightness(int(brightness))
+			case shared.EventBroadcastSent:
+				// Suppress event
 
 			default:
 				log.Printf("[INFO] Unknown Device Event: %T", event)
