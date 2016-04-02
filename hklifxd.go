@@ -213,6 +213,9 @@ func GetHKLight(light common.Light) *HKLight {
 		if (brightness > 0 && !currentPower) {
 			log.Printf("[INFO] Color changed for %s, turning on power.", label)
 			light.SetPowerDuration(true, transitionDuration)
+		} else if (brightness == 0 && currentPower) {
+			log.Printf("[INFO] Color changed for %s, but brightness = 0 turning off power.", label)
+			light.SetPower(false)
 		}
 	}
 
