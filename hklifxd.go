@@ -8,10 +8,8 @@ import (
 
 	"github.com/brutella/log"
 
+	"github.com/brutella/hc/accessory"
 	"github.com/brutella/hc/hap"
-	"github.com/brutella/hc/model"
-	"github.com/brutella/hc/model/accessory"
-	"github.com/brutella/hc/model/characteristic"
 
 	"github.com/pdf/golifx"
 	"github.com/pdf/golifx/common"
@@ -23,14 +21,16 @@ const (
 	HSBKKelvinDefault = uint16(3500)
 	HSBKKelvinMin     = uint16(2500)
 	HSBKKelvinMax     = uint16(9000)
+
+	HueMax        float64 = 360
+	BrightnessMax int     = 100
+	SaturationMax float64 = 100
 )
 
 type HKLight struct {
-	accessory *accessory.Accessory
-	sub       *common.Subscription
+	accessory *accessory.Lightbulb
 	transport hap.Transport
-
-	light model.LightBulb
+	sub       *common.Subscription
 }
 
 var (
@@ -86,20 +86,20 @@ func NewDevice(device common.Device) {
 			event := <-hkLight.sub.Events()
 			switch event.(type) {
 			case common.EventUpdateLabel:
-				log.Printf("[INFO] Updated Label for %s to %s", hkLight.accessory.Name(), event.(common.EventUpdateLabel).Label)
+				log.Printf("[INFO] Updated Label for %s to %s", hkLight.accessory.Info.Name.GetValue(), event.(common.EventUpdateLabel).Label)
 				// TODO Add support for label changes to HomeControl
 				log.Printf("[INFO] Unsupported by HomeControl")
 			case common.EventUpdatePower:
-				log.Printf("[INFO] Updated Power for %s", hkLight.accessory.Name())
-				hkLight.light.SetOn(event.(common.EventUpdatePower).Power)
+				log.Printf("[INFO] Updated Power for %s", hkLight.accessory.Info.Name.GetValue())
+				hkLight.accessory.Lightbulb.On.SetValue(event.(common.EventUpdatePower).Power)
 			case common.EventUpdateColor:
-				log.Printf("[INFO] Updated Color for %s", hkLight.accessory.Name())
+				log.Printf("[INFO] Updated Color for %s", hkLight.accessory.Info.Name.GetValue())
 
 				hue, saturation, brightness := ConvertLIFXColor(event.(common.EventUpdateColor).Color)
 
-				hkLight.light.SetHue(hue)
-				hkLight.light.SetSaturation(saturation)
-				hkLight.light.SetBrightness(int(brightness))
+				hkLight.accessory.Lightbulb.Hue.SetValue(hue)
+				hkLight.accessory.Lightbulb.Saturation.SetValue(saturation)
+				hkLight.accessory.Lightbulb.Brightness.SetValue(int(brightness))
 
 			default:
 				log.Printf("[INFO] Unknown Device Event: %T", event)
@@ -132,25 +132,25 @@ func GetHKLight(light common.Light) *HKLight {
 	label, _ := light.GetLabel()
 	log.Printf("[INFO] Creating New HKLight for %s", label)
 
-	info := model.Info{
+	info := accessory.Info{
 		Name:         label,
 		Manufacturer: "LIFX",
 	}
 
-	lightBulb := accessory.NewLightBulb(info)
+	acc := accessory.NewLightbulb(info)
 
 	power, _ := light.GetPower()
-	lightBulb.SetOn(power)
+	acc.Lightbulb.On.SetValue(power)
 
 	color, _ := light.GetColor()
 	hue, saturation, brightness := ConvertLIFXColor(color)
 
-	lightBulb.SetBrightness(int(brightness))
-	lightBulb.SetSaturation(saturation)
-	lightBulb.SetHue(hue)
+	acc.Lightbulb.Brightness.SetValue(int(brightness))
+	acc.Lightbulb.Saturation.SetValue(saturation)
+	acc.Lightbulb.Hue.SetValue(hue)
 
 	config := hap.Config{Pin: pin}
-	transport, err := hap.NewIPTransport(config, lightBulb.Accessory)
+	transport, err := hap.NewIPTransport(config, acc.Accessory)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -159,10 +159,10 @@ func GetHKLight(light common.Light) *HKLight {
 		transport.Start()
 	}()
 
-	hkLight = &HKLight{lightBulb.Accessory, nil, transport, lightBulb}
+	hkLight = &HKLight{acc, transport, nil}
 	lights[light.ID()] = hkLight
 
-	lightBulb.OnIdentify(func() {
+	acc.OnIdentify(func() {
 		timeout := 1 * time.Second
 
 		for i := 0; i < 4; i++ {
@@ -171,7 +171,7 @@ func GetHKLight(light common.Light) *HKLight {
 		}
 	})
 
-	lightBulb.OnStateChanged(func(power bool) {
+	acc.Lightbulb.On.OnValueRemoteUpdate(func(power bool) {
 		log.Printf("[INFO] Changed State for %s", label)
 		light.SetPowerDuration(power, transitionDuration)
 	})
@@ -179,22 +179,22 @@ func GetHKLight(light common.Light) *HKLight {
 	updateColor := func(light common.Light) {
 		// HAP: [0...360]
 		// LIFX: [0...MAX_UINT16]
-		hue := lightBulb.GetHue()
+		hue := acc.Lightbulb.Hue.GetValue()
 
 		// HAP: [0...100]
 		// LIFX: [0...MAX_UINT16]
-		saturation := lightBulb.GetSaturation()
+		saturation := acc.Lightbulb.Saturation.GetValue()
 
 		// HAP: [0...100]
 		// LIFX: [0...MAX_UINT16]
-		brightness := lightBulb.GetBrightness()
+		brightness := acc.Lightbulb.Brightness.GetValue()
 
 		// [HSBKKelvinMin..HSBKKelvinMax]
 		kelvin := HSBKKelvinDefault
 
-		lifxHue := math.MaxUint16 * float64(hue) / float64(characteristic.MaxHue)
-		lifxSaturation := math.MaxUint16 * float64(saturation) / float64(characteristic.MaxSaturation)
-		lifxBrightness := math.MaxUint16 * float64(brightness) / float64(characteristic.MaxBrightness)
+		lifxHue := math.MaxUint16 * float64(hue) / float64(HueMax)
+		lifxSaturation := math.MaxUint16 * float64(saturation) / float64(SaturationMax)
+		lifxBrightness := math.MaxUint16 * float64(brightness) / float64(BrightnessMax)
 
 		color := common.Color{
 			uint16(lifxHue),
@@ -206,17 +206,17 @@ func GetHKLight(light common.Light) *HKLight {
 		light.SetColor(color, transitionDuration)
 	}
 
-	lightBulb.OnHueChanged(func(value float64) {
+	acc.Lightbulb.Hue.OnValueRemoteUpdate(func(value float64) {
 		log.Printf("[INFO] Changed Hue for %s to %d", label, value)
 		updateColor(light)
 	})
 
-	lightBulb.OnSaturationChanged(func(value float64) {
+	acc.Lightbulb.Saturation.OnValueRemoteUpdate(func(value float64) {
 		log.Printf("[INFO] Changed Saturation for %s to %d", label, value)
 		updateColor(light)
 	})
 
-	lightBulb.OnBrightnessChanged(func(value int) {
+	acc.Lightbulb.Brightness.OnValueRemoteUpdate(func(value int) {
 		log.Printf("[INFO] Changed Brightness for %s to %d", label, value)
 		updateColor(light)
 	})
@@ -225,9 +225,9 @@ func GetHKLight(light common.Light) *HKLight {
 }
 
 func ConvertLIFXColor(color common.Color) (float64, float64, float64) {
-	hue := float64(color.Hue) / float64(math.MaxUint16) * float64(characteristic.MaxHue)
-	saturation := float64(color.Saturation) / float64(math.MaxUint16) * float64(characteristic.MaxSaturation)
-	brightness := float64(color.Brightness) / float64(math.MaxUint16) * float64(characteristic.MaxBrightness)
+	hue := float64(color.Hue) / float64(math.MaxUint16) * float64(HueMax)
+	saturation := float64(color.Saturation) / float64(math.MaxUint16) * float64(SaturationMax)
+	brightness := float64(color.Brightness) / float64(math.MaxUint16) * float64(BrightnessMax)
 
 	return hue, saturation, brightness
 }
