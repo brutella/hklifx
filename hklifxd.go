@@ -6,10 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/brutella/log"
-
+	"github.com/brutella/hc"
 	"github.com/brutella/hc/accessory"
-	"github.com/brutella/hc/hap"
+	"github.com/brutella/log"
 
 	"github.com/pdf/golifx"
 	"github.com/pdf/golifx/common"
@@ -30,7 +29,7 @@ const (
 
 type HKLight struct {
 	accessory *accessory.Lightbulb
-	transport hap.Transport
+	transport hc.Transport
 	sub       *common.Subscription
 }
 
@@ -152,8 +151,8 @@ func GetHKLight(light common.Light) *HKLight {
 	acc.Lightbulb.Saturation.SetValue(saturation)
 	acc.Lightbulb.Hue.SetValue(hue)
 
-	config := hap.Config{Pin: pin}
-	transport, err := hap.NewIPTransport(config, acc.Accessory)
+	config := hc.Config{Pin: pin}
+	transport, err := hc.NewIPTransport(config, acc.Accessory)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -210,10 +209,10 @@ func GetHKLight(light common.Light) *HKLight {
 
 		light.SetColor(color, transitionDuration)
 
-		if (brightness > 0 && !currentPower) {
+		if brightness > 0 && !currentPower {
 			log.Printf("[INFO] Color changed for %s, turning on power.", label)
 			light.SetPowerDuration(true, transitionDuration)
-		} else if (brightness == 0 && currentPower) {
+		} else if brightness == 0 && currentPower {
 			log.Printf("[INFO] Color changed for %s, but brightness = 0 turning off power.", label)
 			light.SetPower(false)
 		}
@@ -268,7 +267,7 @@ func main() {
 
 	transitionDuration = time.Duration(*transitionArg) * time.Second
 
-	hap.OnTermination(func() {
+	hc.OnTermination(func() {
 		for _, light := range lights {
 			light.transport.Stop()
 		}
