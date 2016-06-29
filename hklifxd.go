@@ -219,12 +219,12 @@ func GetHKLight(light common.Light) *HKLight {
 	}
 
 	acc.Lightbulb.Hue.OnValueRemoteUpdate(func(value float64) {
-		log.Printf("[INFO] Changed Hue for %s to %d", label, value)
+		log.Printf("[INFO] Changed Hue for %s to %f", label, value)
 		updateColor(light)
 	})
 
 	acc.Lightbulb.Saturation.OnValueRemoteUpdate(func(value float64) {
-		log.Printf("[INFO] Changed Saturation for %s to %d", label, value)
+		log.Printf("[INFO] Changed Saturation for %s to %f", label, value)
 		updateColor(light)
 	})
 
@@ -236,12 +236,17 @@ func GetHKLight(light common.Light) *HKLight {
 	return hkLight
 }
 
+func Round(f float64) float64 {
+	return math.Floor(f + 0.5)
+}
+
 func ConvertLIFXColor(color common.Color) (float64, float64, float64) {
 	hue := float64(color.Hue) / float64(math.MaxUint16) * float64(HueMax)
 	saturation := float64(color.Saturation) / float64(math.MaxUint16) * float64(SaturationMax)
 	brightness := float64(color.Brightness) / float64(math.MaxUint16) * float64(BrightnessMax)
 
-	return hue, saturation, brightness
+	// Return rounded value, HomeKit only uses integer value
+	return Round(hue), Round(saturation), Round(brightness)
 }
 
 func ToggleLight(light common.Light) {
