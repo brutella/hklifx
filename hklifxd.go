@@ -132,6 +132,11 @@ func GetHKLight(light common.Light) *HKLight {
 	}
 
 	label, _ := light.GetLabel()
+	if label == "" {
+		log.Println("[INFO] LIFX Bulb has no name configured")
+		label = "LIFX Bulb"
+	}
+
 	log.Printf("[INFO] Creating New HKLight for %s", label)
 
 	info := accessory.Info{
