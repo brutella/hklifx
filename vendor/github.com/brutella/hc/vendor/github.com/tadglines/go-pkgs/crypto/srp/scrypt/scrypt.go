@@ -15,8 +15,8 @@
 package scrypt
 
 import (
-	"golang.org/x/crypto/scrypt"
 	"errors"
+	"golang.org/x/crypto/scrypt"
 )
 
 const maxInt = int(^uint(0) >> 1)

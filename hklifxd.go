@@ -8,7 +8,7 @@ import (
 
 	"github.com/brutella/hc"
 	"github.com/brutella/hc/accessory"
-	"github.com/brutella/log"
+	"github.com/brutella/hc/log"
 
 	"github.com/pdf/golifx"
 	"github.com/pdf/golifx/common"
@@ -42,7 +42,7 @@ var (
 func Connect() {
 	client, err := golifx.NewClient(&protocol.V2{Reliable: true})
 	if err != nil {
-		log.Fatalf("[ERR] Failed to initiliaze the client: %s", err)
+		log.Info.Panic("Failed to initiliaze the client: %s", err)
 	}
 
 	client.SetDiscoveryInterval(30 * time.Second)
@@ -52,27 +52,27 @@ func Connect() {
 		event := <-sub.Events()
 		switch event.(type) {
 		case common.EventNewLocation:
-			log.Printf("[INFO] Discovered Location %s", event.(common.EventNewLocation).Location.GetLabel())
+			log.Debug.Printf("Discovered Location %s", event.(common.EventNewLocation).Location.GetLabel())
 		case common.EventNewGroup:
-			log.Printf("[INFO] Discovered Group %s", event.(common.EventNewGroup).Group.GetLabel())
+			log.Debug.Printf("Discovered Group %s", event.(common.EventNewGroup).Group.GetLabel())
 		case common.EventNewDevice:
 			label, _ := event.(common.EventNewDevice).Device.GetLabel()
-			log.Printf("[INFO] Discovered Device %s", label)
+			log.Debug.Printf("Discovered Device %s", label)
 
 			go NewDevice(event.(common.EventNewDevice).Device)
 
 		case common.EventExpiredLocation:
-			log.Printf("[INFO] Expired Location %s", event.(common.EventExpiredLocation).Location.GetLabel())
+			log.Debug.Printf("Expired Location %s", event.(common.EventExpiredLocation).Location.GetLabel())
 		case common.EventExpiredGroup:
-			log.Printf("[INFO] Expired Group %s", event.(common.EventExpiredGroup).Group.GetLabel())
+			log.Debug.Printf("Expired Group %s", event.(common.EventExpiredGroup).Group.GetLabel())
 		case common.EventExpiredDevice:
 			label, _ := event.(common.EventExpiredDevice).Device.GetLabel()
-			log.Printf("[INFO] Expired Device %s", label)
+			log.Debug.Printf("Expired Device %s", label)
 
 			ExpireDevice(event.(common.EventExpiredDevice).Device)
 
 		default:
-			log.Printf("[INFO] Unknown Client Event: %T", event)
+			log.Debug.Printf("Unknown Client Event: %T", event)
 		}
 	}
 }
@@ -86,14 +86,14 @@ func NewDevice(device common.Device) {
 			event := <-hkLight.sub.Events()
 			switch event.(type) {
 			case common.EventUpdateLabel:
-				log.Printf("[INFO] Updated Label for %s to %s", hkLight.accessory.Info.Name.GetValue(), event.(common.EventUpdateLabel).Label)
+				log.Debug.Printf("Updated Label for %s to %s", hkLight.accessory.Info.Name.GetValue(), event.(common.EventUpdateLabel).Label)
 				// TODO Add support for label changes to HomeControl
-				log.Printf("[INFO] Unsupported by HomeControl")
+				log.Debug.Printf("Unsupported by HomeControl")
 			case common.EventUpdatePower:
-				log.Printf("[INFO] Updated Power for %s", hkLight.accessory.Info.Name.GetValue())
+				log.Debug.Printf("Updated Power for %s", hkLight.accessory.Info.Name.GetValue())
 				hkLight.accessory.Lightbulb.On.SetValue(event.(common.EventUpdatePower).Power)
 			case common.EventUpdateColor:
-				log.Printf("[INFO] Updated Color for %s", hkLight.accessory.Info.Name.GetValue())
+				log.Debug.Printf("Updated Color for %s", hkLight.accessory.Info.Name.GetValue())
 
 				hue, saturation, brightness := ConvertLIFXColor(event.(common.EventUpdateColor).Color)
 
@@ -104,11 +104,11 @@ func NewDevice(device common.Device) {
 				// Suppress event
 
 			default:
-				log.Printf("[INFO] Unknown Device Event: %T", event)
+				log.Debug.Printf("Unknown Device Event: %T", event)
 			}
 		}
 	} else {
-		log.Println("[INFO] Unsupported Device")
+		log.Info.Println("Unsupported Device")
 	}
 }
 
@@ -121,7 +121,7 @@ func ExpireDevice(device common.Device) {
 			delete(lights, light.ID())
 		}
 	} else {
-		log.Println("[INFO] Unsupported Device")
+		log.Info.Println("Unsupported Device")
 	}
 }
 
@@ -132,7 +132,7 @@ func GetHKLight(light common.Light) *HKLight {
 	}
 
 	label, _ := light.GetLabel()
-	log.Printf("[INFO] Creating New HKLight for %s", label)
+	log.Debug.Printf("Creating New HKLight for %s", label)
 
 	info := accessory.Info{
 		Name:         label,
@@ -154,7 +154,7 @@ func GetHKLight(light common.Light) *HKLight {
 	config := hc.Config{Pin: pin}
 	transport, err := hc.NewIPTransport(config, acc.Accessory)
 	if err != nil {
-		log.Fatal(err)
+		log.Info.Panic(err)
 	}
 
 	go func() {
@@ -174,7 +174,7 @@ func GetHKLight(light common.Light) *HKLight {
 	})
 
 	acc.Lightbulb.On.OnValueRemoteUpdate(func(power bool) {
-		log.Printf("[INFO] Changed State for %s", label)
+		log.Debug.Printf("Changed State for %s", label)
 		light.SetPowerDuration(power, transitionDuration)
 	})
 
@@ -210,26 +210,26 @@ func GetHKLight(light common.Light) *HKLight {
 		light.SetColor(color, transitionDuration)
 
 		if brightness > 0 && !currentPower {
-			log.Printf("[INFO] Color changed for %s, turning on power.", label)
+			log.Debug.Printf("Color changed for %s, turning on power.", label)
 			light.SetPowerDuration(true, transitionDuration)
 		} else if brightness == 0 && currentPower {
-			log.Printf("[INFO] Color changed for %s, but brightness = 0 turning off power.", label)
+			log.Debug.Printf("Color changed for %s, but brightness = 0 turning off power.", label)
 			light.SetPower(false)
 		}
 	}
 
 	acc.Lightbulb.Hue.OnValueRemoteUpdate(func(value float64) {
-		log.Printf("[INFO] Changed Hue for %s to %f", label, value)
+		log.Debug.Printf("Changed Hue for %s to %f", label, value)
 		updateColor(light)
 	})
 
 	acc.Lightbulb.Saturation.OnValueRemoteUpdate(func(value float64) {
-		log.Printf("[INFO] Changed Saturation for %s to %f", label, value)
+		log.Debug.Printf("Changed Saturation for %s to %f", label, value)
 		updateColor(light)
 	})
 
 	acc.Lightbulb.Brightness.OnValueRemoteUpdate(func(value int) {
-		log.Printf("[INFO] Changed Brightness for %s to %d", label, value)
+		log.Debug.Printf("Changed Brightness for %s to %d", label, value)
 		updateColor(light)
 	})
 
@@ -265,9 +265,8 @@ func main() {
 
 	pin = *pinArg
 
-	if !*verboseArg {
-		log.Info = false
-		log.Verbose = false
+	if *verboseArg {
+		log.Debug.Enable()
 	}
 
 	transitionDuration = time.Duration(*transitionArg) * time.Second
