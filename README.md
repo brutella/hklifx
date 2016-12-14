@@ -20,6 +20,8 @@ After pairing the light bulbs with HomeKit using any iOS HomeKit app (e.g. [Home
         # Clone project
         git clone https://github.com/brutella/hklifx && cd hklifx
         
+        # Fetch hklifxd go dependencies
+        go get
 4. Run
 
         go run hklifxd.go -pin 00102003 -v
