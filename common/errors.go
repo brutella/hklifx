@@ -20,6 +20,8 @@ var (
 	ErrTimeout = errors.New(`Timed out`)
 	// ErrDeviceInvalidType invalid device type
 	ErrDeviceInvalidType = errors.New(`Invalid device type`)
+	// ErrUnsupported operation is not supported
+	ErrUnsupported = errors.New(`Operation not supported`)
 )
 
 // ErrNotImplemented not implemented

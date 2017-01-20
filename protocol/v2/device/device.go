@@ -44,16 +44,6 @@ const (
 	StateGroup        shared.Message = 53
 	EchoRequest       shared.Message = 58
 	EchoResponse      shared.Message = 59
-
-	VendorLifx = 1
-
-	ProductLifxOriginal1000        uint32 = 1
-	ProductLifxColor650            uint32 = 3
-	ProductLifxWhite800LowVoltage  uint32 = 10
-	ProductLifxWhite800HighVoltage uint32 = 11
-	ProductLifxWhite900BR30        uint32 = 18
-	ProductLifxColor1000BR30       uint32 = 20
-	ProductLifxColor1000           uint32 = 22
 )
 
 type response struct {
@@ -74,6 +64,7 @@ type Device struct {
 	firmwareVersion       uint32
 	firmwareVersionString string
 	provisional           bool
+	product               *Product
 
 	locationID string
 	groupID    string
@@ -465,7 +456,7 @@ func (d *Device) GetGroup() (ret string, err error) {
 }
 
 func (d *Device) GetHardwareVendor() (uint32, error) {
-	if d.CachedHardwareProduct() != 0 {
+	if d.CachedHardwareVendor() != 0 {
 		return d.CachedHardwareVendor(), nil
 	}
 
@@ -491,7 +482,7 @@ func (d *Device) GetHardwareProduct() (uint32, error) {
 }
 
 func (d *Device) GetHardwareVersion() (uint32, error) {
-	if d.CachedHardwareProduct() != 0 {
+	if d.CachedHardwareVersion() != 0 {
 		return d.CachedHardwareVersion(), nil
 	}
 
@@ -516,9 +507,27 @@ func (d *Device) GetHardwareVersion() (uint32, error) {
 
 	d.Lock()
 	d.hardwareVersion = v
+	if vendor, ok := Vendors[v.Vendor]; ok {
+		if product, ok := vendor.Products[v.Product]; ok {
+			d.product = product
+		}
+	}
 	d.Unlock()
 
 	return d.CachedHardwareVersion(), nil
+}
+
+func (d *Device) GetProduct() (*Product, error) {
+	if d.CachedProduct() != nil {
+		return d.CachedProduct(), nil
+	}
+
+	_, err := d.GetHardwareVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	return d.CachedProduct(), nil
 }
 
 func (d *Device) CachedHardwareVersion() uint32 {
@@ -537,6 +546,12 @@ func (d *Device) CachedHardwareProduct() uint32 {
 	d.RLock()
 	defer d.RUnlock()
 	return d.hardwareVersion.Product
+}
+
+func (d *Device) CachedProduct() *Product {
+	d.RLock()
+	defer d.RUnlock()
+	return d.product
 }
 
 func (d *Device) CachedFirmwareVersion() string {
