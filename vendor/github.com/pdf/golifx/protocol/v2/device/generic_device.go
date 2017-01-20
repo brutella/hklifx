@@ -23,7 +23,6 @@ type GenericDevice interface {
 	CachedLocation() string
 	GetGroup() (string, error)
 	CachedGroup() string
-	GetHardwareVendor() (uint32, error)
-	GetHardwareProduct() (uint32, error)
+	GetProduct() (*Product, error)
 	ResetLimiter()
 }

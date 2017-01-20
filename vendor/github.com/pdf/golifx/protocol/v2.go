@@ -709,12 +709,7 @@ func (p *V2) updateLocationGroup(dev device.GenericDevice) {
 // the dev untouched
 func (p *V2) classifyDevice(dev device.GenericDevice) device.GenericDevice {
 	common.Log.Debugf("Attempting to determine device type for: %d", dev.ID())
-	vendor, err := dev.GetHardwareVendor()
-	if err != nil {
-		common.Log.Errorf("Error retrieving device hardware vendor: %v", err)
-		return dev
-	}
-	product, err := dev.GetHardwareProduct()
+	product, err := dev.GetProduct()
 	if err != nil {
 		common.Log.Errorf("Error retrieving device hardware product: %v", err)
 		return dev
@@ -722,22 +717,24 @@ func (p *V2) classifyDevice(dev device.GenericDevice) device.GenericDevice {
 
 	defer dev.SetProvisional(false)
 
-	switch vendor {
-	case device.VendorLifx:
-		switch product {
-		case device.ProductLifxOriginal1000, device.ProductLifxColor650, device.ProductLifxWhite800LowVoltage, device.ProductLifxWhite800HighVoltage, device.ProductLifxWhite900BR30, device.ProductLifxColor1000BR30, device.ProductLifxColor1000:
-			p.Lock()
-			d := dev.(*device.Device)
-			d.Lock()
-			l := &device.Light{Device: d}
-			common.Log.Debugf("Device is a light: %v", l.ID())
-			// Replace the known dev with our constructed light
-			p.devices[l.ID()] = l
-			d.Unlock()
-			p.Unlock()
-			return l
-		}
+	if product == nil {
+		common.Log.Debugf("Unknown product: %d", dev.ID())
+		return dev
 	}
 
+	if product.Supports(device.FeatureLight) {
+		p.Lock()
+		d := dev.(*device.Device)
+		d.Lock()
+		l := &device.Light{Device: d}
+		common.Log.Debugf("Device is a light: %d", l.ID())
+		// Replace the known dev with our constructed light
+		p.devices[l.ID()] = l
+		d.Unlock()
+		p.Unlock()
+		return l
+	}
+
+	common.Log.Debugf("Device is not a light: %d", dev.ID())
 	return dev
 }
