@@ -17,7 +17,7 @@ type Client struct {
 	timeout               time.Duration
 	retryInterval         time.Duration
 	internalRetryInterval time.Duration
-	subscriptions         map[string]*common.Subscription
+	common.SubscriptionProvider
 	sync.RWMutex
 }
 
@@ -43,10 +43,7 @@ func (c *Client) GetLocationByID(id string) (common.Location, error) {
 		timeout = make(<-chan time.Time)
 	}
 
-	sub, err := c.protocol.NewSubscription()
-	if err != nil {
-		return nil, err
-	}
+	sub := c.protocol.Subscribe()
 	defer func() {
 		if err = sub.Close(); err != nil {
 			common.Log.Warnf("Failed closing location subscription: %+v", err)
@@ -90,12 +87,9 @@ func (c *Client) GetLocationByLabel(label string) (common.Location, error) {
 		timeout = make(<-chan time.Time)
 	}
 
-	sub, err := c.protocol.NewSubscription()
-	if err != nil {
-		return nil, err
-	}
+	sub := c.protocol.Subscribe()
 	defer func() {
-		if err = sub.Close(); err != nil {
+		if err := sub.Close(); err != nil {
 			common.Log.Warnf("Failed closing location subscription: %+v", err)
 		}
 	}()
@@ -141,10 +135,7 @@ func (c *Client) GetGroupByID(id string) (common.Group, error) {
 		timeout = make(<-chan time.Time)
 	}
 
-	sub, err := c.protocol.NewSubscription()
-	if err != nil {
-		return nil, err
-	}
+	sub := c.protocol.Subscribe()
 	defer func() {
 		if err = sub.Close(); err != nil {
 			common.Log.Warnf("Failed closing group subscription: %+v", err)
@@ -188,12 +179,9 @@ func (c *Client) GetGroupByLabel(label string) (common.Group, error) {
 		timeout = make(<-chan time.Time)
 	}
 
-	sub, err := c.protocol.NewSubscription()
-	if err != nil {
-		return nil, err
-	}
+	sub := c.protocol.Subscribe()
 	defer func() {
-		if err = sub.Close(); err != nil {
+		if err := sub.Close(); err != nil {
 			common.Log.Warnf("Failed closing group subscription: %+v", err)
 		}
 	}()
@@ -239,10 +227,7 @@ func (c *Client) GetDeviceByID(id uint64) (common.Device, error) {
 		timeout = make(<-chan time.Time)
 	}
 
-	sub, err := c.protocol.NewSubscription()
-	if err != nil {
-		return nil, err
-	}
+	sub := c.protocol.Subscribe()
 	defer func() {
 		if err = sub.Close(); err != nil {
 			common.Log.Warnf("Failed closing device subscription: %+v", err)
@@ -287,12 +272,9 @@ func (c *Client) GetDeviceByLabel(label string) (common.Device, error) {
 		timeout = make(<-chan time.Time)
 	}
 
-	sub, err := c.protocol.NewSubscription()
-	if err != nil {
-		return nil, err
-	}
+	sub := c.protocol.Subscribe()
 	defer func() {
-		if err = sub.Close(); err != nil {
+		if err := sub.Close(); err != nil {
 			common.Log.Warnf("Failed closing device subscription: %+v", err)
 		}
 	}()
@@ -448,39 +430,8 @@ func (c *Client) GetRetryInterval() *time.Duration {
 	return &c.retryInterval
 }
 
-// NewSubscription returns a new *common.Subscription for receiving events from
-// this client.
-func (c *Client) NewSubscription() (*common.Subscription, error) {
-	sub := common.NewSubscription(c)
-	c.Lock()
-	c.subscriptions[sub.ID()] = sub
-	c.Unlock()
-	return sub, nil
-}
-
-// CloseSubscription is a callback for handling the closing of subscriptions.
-func (c *Client) CloseSubscription(sub *common.Subscription) error {
-	c.RLock()
-	_, ok := c.subscriptions[sub.ID()]
-	c.RUnlock()
-	if !ok {
-		return common.ErrNotFound
-	}
-	c.Lock()
-	delete(c.subscriptions, sub.ID())
-	c.Unlock()
-
-	return nil
-}
-
 // Close signals the termination of this client, and cleans up resources
 func (c *Client) Close() error {
-	for _, sub := range c.subscriptions {
-		if err := sub.Close(); err != nil {
-			return err
-		}
-	}
-
 	c.Lock()
 	defer c.Unlock()
 
@@ -492,33 +443,15 @@ func (c *Client) Close() error {
 		close(c.quitChan)
 	}
 
+	if err := c.SubscriptionProvider.Close(); err != nil {
+		common.Log.Warnf("closing subscriptions: %v", err)
+	}
 	return c.protocol.Close()
-}
-
-// publish an event to subscribers
-func (c *Client) publish(event interface{}) error {
-	c.RLock()
-	subs := make(map[string]*common.Subscription, len(c.subscriptions))
-	for k, sub := range c.subscriptions {
-		subs[k] = sub
-	}
-	c.RUnlock()
-
-	for _, sub := range subs {
-		if err := sub.Write(event); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // subscribe to protocol events and proxy to client subscriptions
 func (c *Client) subscribe() error {
-	sub, err := c.protocol.NewSubscription()
-	if err != nil {
-		return err
-	}
+	sub := c.protocol.Subscribe()
 	events := sub.Events()
 
 	go func() {
@@ -539,9 +472,7 @@ func (c *Client) subscribe() error {
 					common.EventExpiredDevice,
 					common.EventExpiredGroup,
 					common.EventExpiredLocation:
-					if err = c.publish(event); err != nil {
-						common.Log.Warnf("Failed publishing event on client: %v", err)
-					}
+					c.Notify(event)
 				}
 			}
 		}
@@ -558,8 +489,11 @@ func (c *Client) discover() error {
 
 	go func() {
 		c.RLock()
-		tick := time.Tick(c.discoveryInterval)
+		tick := time.NewTicker(c.discoveryInterval)
 		c.RUnlock()
+		defer func() {
+			tick.Stop()
+		}()
 		for {
 			select {
 			case <-c.quitChan:
@@ -571,7 +505,7 @@ func (c *Client) discover() error {
 			case <-c.quitChan:
 				common.Log.Debugf("Quitting discovery loop")
 				return
-			case <-tick:
+			case <-tick.C:
 				common.Log.Debugf("Performing discovery")
 				_ = c.protocol.Discover()
 			}

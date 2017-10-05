@@ -25,7 +25,7 @@ import (
 
 const (
 	// VERSION of this library
-	VERSION = "0.5.1"
+	VERSION = "1.0.1"
 )
 
 // NewClient returns a pointer to a new Client and any error that occurred
@@ -34,7 +34,6 @@ const (
 func NewClient(p common.Protocol) (*Client, error) {
 	c := &Client{
 		protocol:              p,
-		subscriptions:         make(map[string]*common.Subscription),
 		timeout:               common.DefaultTimeout,
 		retryInterval:         common.DefaultRetryInterval,
 		internalRetryInterval: 10 * time.Millisecond,
