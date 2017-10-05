@@ -22,6 +22,8 @@ type Device interface {
 	// CachedFirmwareVersion returns the last known firmware version of the
 	// device
 	CachedFirmwareVersion() string
+	// GetProductName returns the product name of the device
+	GetProductName() (string, error)
 
 	// Device is a SubscriptionTarget
 	SubscriptionTarget

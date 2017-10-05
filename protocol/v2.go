@@ -27,39 +27,11 @@ type V2 struct {
 	deviceQueue   chan device.GenericDevice
 	wg            sync.WaitGroup
 	devices       map[uint64]device.GenericDevice
-	subscriptions map[string]*common.Subscription
 	locations     map[string]*device.Location
 	groups        map[string]*device.Group
 	quitChan      chan struct{}
+	common.SubscriptionProvider
 	sync.RWMutex
-}
-
-// NewSubscription returns a new *common.Subscription for receiving events from
-// this protocol.
-func (p *V2) NewSubscription() (*common.Subscription, error) {
-	if err := p.init(); err != nil {
-		return nil, err
-	}
-	sub := common.NewSubscription(p)
-	p.Lock()
-	p.subscriptions[sub.ID()] = sub
-	p.Unlock()
-	return sub, nil
-}
-
-// CloseSubscription is a callback for handling the closing of subscriptions.
-func (p *V2) CloseSubscription(sub *common.Subscription) error {
-	p.RLock()
-	_, ok := p.subscriptions[sub.ID()]
-	p.RUnlock()
-	if !ok {
-		return common.ErrNotFound
-	}
-	p.Lock()
-	delete(p.subscriptions, sub.ID())
-	p.Unlock()
-
-	return nil
 }
 
 func (p *V2) init() error {
@@ -89,7 +61,7 @@ func (p *V2) init() error {
 		return err
 	}
 	p.broadcast = &device.Light{Device: broadcastDev}
-	broadcastSub, err := p.broadcast.NewSubscription()
+	broadcastSub := p.broadcast.Subscribe()
 	if err != nil {
 		return err
 	}
@@ -97,30 +69,11 @@ func (p *V2) init() error {
 	p.devices = make(map[uint64]device.GenericDevice)
 	p.locations = make(map[string]*device.Location)
 	p.groups = make(map[string]*device.Group)
-	p.subscriptions = make(map[string]*common.Subscription)
 	p.quitChan = make(chan struct{})
 	go p.broadcastLimiter(broadcastSub.Events())
 	go p.dispatcher()
 	go p.addDevices()
 	p.initialized = true
-
-	return nil
-}
-
-// Pushes an event to subscribers
-func (p *V2) publish(event interface{}) error {
-	p.RLock()
-	subs := make(map[string]*common.Subscription, len(p.subscriptions))
-	for k, sub := range p.subscriptions {
-		subs[k] = sub
-	}
-	p.RUnlock()
-
-	for _, sub := range subs {
-		if err := sub.Write(event); err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
@@ -169,9 +122,7 @@ func (p *V2) Discover() error {
 				}
 				if len(location.Devices()) == 0 {
 					p.removeLocation(location.ID())
-					if err = p.publish(common.EventExpiredLocation{Location: location}); err != nil {
-						common.Log.Warnf("Failed publishing expired event for location '%s'", locationID)
-					}
+					p.Notify(common.EventExpiredLocation{Location: location})
 				}
 			}
 
@@ -183,16 +134,11 @@ func (p *V2) Discover() error {
 				}
 				if len(group.Devices()) == 0 {
 					p.removeGroup(group.ID())
-					if err = p.publish(common.EventExpiredGroup{Group: group}); err != nil {
-						common.Log.Warnf("Failed publishing expired event for group '%s'", groupID)
-					}
+					p.Notify(common.EventExpiredGroup{Group: group})
 				}
 			}
 
-			err = p.publish(common.EventExpiredDevice{Device: dev})
-			if err != nil {
-				common.Log.Warnf("Failed removing extinct device '%d' from client: %v", dev.ID(), err)
-			}
+			p.Notify(common.EventExpiredDevice{Device: dev})
 		}
 	}
 	if err := p.broadcast.Discover(); err != nil {
@@ -257,12 +203,6 @@ func (p *V2) SetColor(color common.Color, duration time.Duration) error {
 // Close closes the protocol driver, no further communication with the protocol
 // is possible
 func (p *V2) Close() error {
-	for _, sub := range p.subscriptions {
-		if err := sub.Close(); err != nil {
-			return err
-		}
-	}
-
 	p.Lock()
 	defer p.Unlock()
 
@@ -298,7 +238,7 @@ func (p *V2) Close() error {
 		close(p.deviceQueue)
 	}
 
-	return nil
+	return p.SubscriptionProvider.Close()
 }
 
 func (p *V2) broadcastLimiter(events <-chan interface{}) {
@@ -333,11 +273,11 @@ func (p *V2) dispatcher() {
 			p.Lock()
 			for _, dev := range p.devices {
 				if err := dev.Close(); err != nil {
-					common.Log.Errorf("Failed closing device '%d': %v", dev.ID(), err)
+					common.Log.Debugf("Failed closing device '%d': %v", dev.ID(), err)
 				}
 			}
 			if err := p.socket.Close(); err != nil {
-				common.Log.Errorf("Failed closing socket: %v", err)
+				common.Log.Debugf("Failed closing socket: %v", err)
 			}
 			p.Unlock()
 			return
@@ -570,10 +510,7 @@ func (p *V2) addLocation(pkt *packet.Packet) {
 	p.Lock()
 	p.locations[l.ID()] = l
 	p.Unlock()
-	if err := p.publish(common.EventNewLocation{Location: l}); err != nil {
-		common.Log.Errorf("Error adding location to client: %v", err)
-		return
-	}
+	p.Notify(common.EventNewLocation{Location: l})
 }
 
 func (p *V2) removeLocation(id string) {
@@ -599,10 +536,7 @@ func (p *V2) addGroup(pkt *packet.Packet) {
 	p.Lock()
 	p.groups[g.ID()] = g
 	p.Unlock()
-	if err := p.publish(common.EventNewGroup{Group: g}); err != nil {
-		common.Log.Errorf("Error adding group to client: %v", err)
-		return
-	}
+	p.Notify(common.EventNewGroup{Group: g})
 }
 
 func (p *V2) removeGroup(id string) {
@@ -650,18 +584,11 @@ func (p *V2) addDevice(dev device.GenericDevice) {
 		return
 	}
 
-	sub, err := dev.NewSubscription()
-	if err != nil {
-		common.Log.Warnf("Error obtaining subscription from %d", dev.ID())
-	} else {
-		go p.broadcastLimiter(sub.Events())
-	}
+	sub := dev.Subscribe()
+	go p.broadcastLimiter(sub.Events())
 
 	common.Log.Debugf("Adding device to client: %d", dev.ID())
-	if err := p.publish(common.EventNewDevice{Device: dev}); err != nil {
-		common.Log.Errorf("Error adding device to client: %v", err)
-		return
-	}
+	p.Notify(common.EventNewDevice{Device: dev})
 	common.Log.Debugf("Added device to client: %d", dev.ID())
 }
 

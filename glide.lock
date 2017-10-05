@@ -1,6 +1,110 @@
 hash: 13285292d7f5143483785c6c0d34e1be7dad9ccf0b3701184036a2a01b75de5c
-updated: 2016-03-14T21:34:52.079685486+11:00
+updated: 2017-09-30T13:45:25.330762543+10:00
 imports:
+- name: github.com/cpuguy83/go-md2man
+  version: 1d903dcb749992f3741d744c0f8376b4bd7eb3e1
+  subpackages:
+  - md2man
+- name: github.com/davecgh/go-spew
+  version: a476722483882dd40b8111f0eb64e1d7f43f56e4
+  subpackages:
+  - spew
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/lunixbochs/struc
+  version: ef56447db6a068ad9e52bc54a1aff5fb9e1ed2dd
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib
+- name: github.com/prometheus/log
+  version: 9a3136781e1ff7bc42736ba4acb81339b1422551
+- name: github.com/russross/blackfriday
+  version: 4048872b16cc0fc2c5fd9eacf0ed2c2fedaa0c8c
 - name: github.com/satori/go.uuid
   version: 6b8e5b55d20d01ad47ecfe98e5171688397c61e9
-devImports: []
+- name: github.com/Sirupsen/logrus
+  version: 89742aefa4b206dcf400792f3bd35b542998eb3b
+- name: github.com/spf13/cobra
+  version: e5f66de850af3302fbe378c8acded2b0fa55472c
+  subpackages:
+  - doc
+- name: github.com/spf13/pflag
+  version: 7aff26db30c1be810f9de5038ec5ef96ac41fd7c
+- name: github.com/stretchr/objx
+  version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
+- name: github.com/stretchr/testify
+  version: 890a5c3458b43e6104ff5da8dfa139d013d77544
+  subpackages:
+  - assert
+  - mock
+- name: golang.org/x/crypto
+  version: 76eec36fa14229c4b25bb894c2d0e591527af429
+  subpackages:
+  - ssh/terminal
+- name: golang.org/x/sys
+  version: 314a259e304ff91bd6985da2a7149bbf91237993
+  subpackages:
+  - unix
+  - windows
+- name: gopkg.in/yaml.v2
+  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
+testImports:
+- name: github.com/onsi/ginkgo
+  version: 11459a886d9cd66b319dac7ef1e917ee221372c9
+  subpackages:
+  - config
+  - internal/codelocation
+  - internal/containernode
+  - internal/failer
+  - internal/leafnodes
+  - internal/remote
+  - internal/spec
+  - internal/spec_iterator
+  - internal/specrunner
+  - internal/suite
+  - internal/testingtproxy
+  - internal/writer
+  - reporters
+  - reporters/stenographer
+  - reporters/stenographer/support/go-colorable
+  - reporters/stenographer/support/go-isatty
+  - types
+- name: github.com/onsi/gomega
+  version: dcabb60a477c2b6f456df65037cb6708210fbb02
+  subpackages:
+  - format
+  - internal/assertion
+  - internal/asyncassertion
+  - internal/oraclematcher
+  - internal/testingtsupport
+  - matchers
+  - matchers/support/goraph/bipartitegraph
+  - matchers/support/goraph/edge
+  - matchers/support/goraph/node
+  - matchers/support/goraph/util
+  - types
+- name: golang.org/x/net
+  version: 0a9397675ba34b2845f758fe3cd68828369c6517
+  subpackages:
+  - html
+  - html/atom
+  - html/charset
+- name: golang.org/x/text
+  version: 1cbadb444a806fd9430d14ad08967ed91da4fa0a
+  subpackages:
+  - encoding
+  - encoding/charmap
+  - encoding/htmlindex
+  - encoding/internal
+  - encoding/internal/identifier
+  - encoding/japanese
+  - encoding/korean
+  - encoding/simplifiedchinese
+  - encoding/traditionalchinese
+  - encoding/unicode
+  - internal/tag
+  - internal/utf8internal
+  - language
+  - runes
+  - transform

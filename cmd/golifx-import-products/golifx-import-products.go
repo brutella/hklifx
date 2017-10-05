@@ -9,10 +9,23 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/pdf/golifx/protocol/v2/device"
 )
+
+type vendorSorter []*device.Vendor
+
+func (s vendorSorter) Len() int           { return len(s) }
+func (s vendorSorter) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s vendorSorter) Less(i, j int) bool { return s[i].ID < s[j].ID }
+
+type productSorter []*device.Product
+
+func (s productSorter) Len() int           { return len(s) }
+func (s productSorter) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s productSorter) Less(i, j int) bool { return s[i].ID < s[j].ID }
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
@@ -41,10 +54,11 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	var vendors []*device.Vendor
+	var vendors vendorSorter
 	if err = json.Unmarshal(in, &vendors); err != nil {
 		log.Fatalln(err)
 	}
+	sort.Sort(vendors)
 
 	g := &Generator{}
 
@@ -58,7 +72,14 @@ func main() {
 		g.Printf("\t\t\tID: %d,\n", vendor.ID)
 		g.Printf("\t\t\tName: `%s`,\n", vendor.Name)
 		g.Printf("\t\t\tProducts: map[uint32]*Product{\n")
+		products := make(productSorter, len(vendor.Products))
+		i := 0
 		for _, product := range vendor.Products {
+			products[i] = product
+			i++
+		}
+		sort.Sort(products)
+		for _, product := range products {
 			g.Printf("\t\t\t\t%d: &Product{ID: %d, VendorID: %d, Name: `%s`, Features: %d},\n", product.ID, product.ID, vendor.ID, product.Name, product.Features)
 		}
 		g.Printf("\t\t\t},\n")

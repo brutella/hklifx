@@ -2,18 +2,22 @@
 
 package device
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const (
-	_Feature_name_0 = "FeatureColor"
-	_Feature_name_1 = "FeatureInfrared"
-	_Feature_name_2 = "FeatureMultizone"
+	_Feature_name_0 = "FeatureLight"
+	_Feature_name_1 = "FeatureColor"
+	_Feature_name_2 = "FeatureInfrared"
+	_Feature_name_3 = "FeatureMultizone"
 )
 
 var (
 	_Feature_index_0 = [...]uint8{0, 12}
-	_Feature_index_1 = [...]uint8{0, 15}
-	_Feature_index_2 = [...]uint8{0, 16}
+	_Feature_index_1 = [...]uint8{0, 12}
+	_Feature_index_2 = [...]uint8{0, 15}
+	_Feature_index_3 = [...]uint8{0, 16}
 )
 
 func (i Feature) String() string {
@@ -24,6 +28,8 @@ func (i Feature) String() string {
 		return _Feature_name_1
 	case i == 4:
 		return _Feature_name_2
+	case i == 6:
+		return _Feature_name_3
 	default:
 		return fmt.Sprintf("Feature(%d)", i)
 	}
@@ -31,8 +37,9 @@ func (i Feature) String() string {
 
 var _FeatureNameToValue_map = map[string]Feature{
 	_Feature_name_0[0:12]: 0,
-	_Feature_name_1[0:15]: 2,
-	_Feature_name_2[0:16]: 4,
+	_Feature_name_1[0:12]: 2,
+	_Feature_name_2[0:15]: 4,
+	_Feature_name_3[0:16]: 6,
 }
 
 func FeatureString(s string) (Feature, error) {
