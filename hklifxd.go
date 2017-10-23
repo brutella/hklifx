@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"math"
+	"net"
 	"os"
 	"time"
 
@@ -35,12 +36,13 @@ type HKLight struct {
 
 var (
 	lights             map[uint64]*HKLight
+	discoveryAddr      string
 	pin                string
 	transitionDuration time.Duration
 )
 
 func Connect() {
-	client, err := golifx.NewClient(&protocol.V2{Reliable: true})
+	client, err := golifx.NewClient(&protocol.V2{IP: net.ParseIP(discoveryAddr), Reliable: true})
 	if err != nil {
 		log.Info.Panic("Failed to initiliaze the client: %s", err)
 	}
@@ -257,12 +259,14 @@ func ToggleLight(light common.Light) {
 func main() {
 	lights = map[uint64]*HKLight{}
 
+	discoveryAddrArg := flag.String("discovery-addr", "", "IP address from which bulb discovery should occur")
 	pinArg := flag.String("pin", "", "PIN used to pair the LIFX bulbs with HomeKit")
 	verboseArg := flag.Bool("v", false, "Whether or not log output is displayed")
 	transitionArg := flag.Float64("transition-duration", 1, "Transition time in seconds")
 
 	flag.Parse()
 
+	discoveryAddr = *discoveryAddrArg
 	pin = *pinArg
 
 	if *verboseArg {
