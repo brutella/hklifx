@@ -35,6 +35,7 @@ type HKLight struct {
 
 var (
 	lights             map[uint64]*HKLight
+	listenAddr         string
 	pin                string
 	transitionDuration time.Duration
 )
@@ -151,7 +152,7 @@ func GetHKLight(light common.Light) *HKLight {
 	acc.Lightbulb.Saturation.SetValue(saturation)
 	acc.Lightbulb.Hue.SetValue(hue)
 
-	config := hc.Config{Pin: pin}
+	config := hc.Config{IP: listenAddr, Pin: pin}
 	transport, err := hc.NewIPTransport(config, acc.Accessory)
 	if err != nil {
 		log.Info.Panic(err)
@@ -257,12 +258,14 @@ func ToggleLight(light common.Light) {
 func main() {
 	lights = map[uint64]*HKLight{}
 
+	listenAddrArg := flag.String("listen-addr", "", "IP address HomeControl should bind to")
 	pinArg := flag.String("pin", "", "PIN used to pair the LIFX bulbs with HomeKit")
 	verboseArg := flag.Bool("v", false, "Whether or not log output is displayed")
 	transitionArg := flag.Float64("transition-duration", 1, "Transition time in seconds")
 
 	flag.Parse()
 
+	listenAddr = *listenAddrArg
 	pin = *pinArg
 
 	if *verboseArg {
