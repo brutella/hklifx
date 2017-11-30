@@ -39,7 +39,7 @@ type of device you will interact with.
 ```go
 const (
 	// VERSION of this library
-	VERSION = "1.0.0"
+	VERSION = "1.0.4"
 )
 ```
 
