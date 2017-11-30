@@ -2,8 +2,6 @@ package common
 
 import (
 	"sync"
-
-	"github.com/prometheus/log"
 )
 
 // SubscriptionProvider provides an embedable subscription factory
@@ -31,7 +29,7 @@ func (s *SubscriptionProvider) Notify(event interface{}) {
 	defer s.RUnlock()
 	for _, sub := range s.subscriptions {
 		if err := sub.notify(event); err != nil {
-			log.Warnf("Failed notifying subscription (%s): %s", sub.id, err)
+			Log.Warnf("Failed notifying subscription (%s): %s", sub.id, err)
 		}
 	}
 }

@@ -4,9 +4,11 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"runtime"
+	"syscall"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -23,6 +25,7 @@ var (
 
 	flagTimeout  time.Duration
 	flagLogLevel string
+	flagIP       net.IP
 	flagPort     int
 
 	logger = logrus.New()
@@ -65,6 +68,7 @@ func init() {
 
 	app.PersistentFlags().DurationVarP(&flagTimeout, `timeout`, `t`, common.DefaultTimeout, `timeout for all operations`)
 	app.PersistentFlags().StringVarP(&flagLogLevel, `log-level`, `L`, `info`, `log level, one of: [debug,info,warn,error]`)
+	app.PersistentFlags().IPVarP(&flagIP, `ip-address`, `I`, net.IPv4(0, 0, 0, 0), `UDP listen address`)
 	app.PersistentFlags().IntVarP(&flagPort, `port`, `p`, 56700, `UDP listen port`)
 
 	app.AddCommand(cmdLight)
@@ -160,7 +164,7 @@ func usage(c *cobra.Command, args []string) {
 func watch(c *cobra.Command, args []string) {
 	sig := make(chan os.Signal, 1)
 
-	signal.Notify(sig, os.Interrupt, os.Kill)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 	<-sig
 }
 
