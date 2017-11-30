@@ -35,8 +35,6 @@ type Protocol interface {
 	// Close closes the protocol driver, no further communication with the
 	// protocol is possible
 	Close() error
-	// NewSubscription returns a *Subscription for a Client to obtain
-	// events from the Protocol
 
 	// SetPower sets the power state globally, on all devices
 	SetPower(state bool) error

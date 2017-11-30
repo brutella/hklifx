@@ -17,22 +17,21 @@ type stateGroup struct {
 }
 
 type Group struct {
-	id            [16]byte
-	idEncoded     string
-	label         [32]byte
-	updatedAt     uint64
-	devices       map[uint64]GenericDevice
-	subscriptions map[string]*common.Subscription
-	quitChan      chan struct{}
-	color         common.Color
-	power         bool
+	id        [16]byte
+	idEncoded string
+	label     [32]byte
+	updatedAt uint64
+	devices   map[uint64]GenericDevice
+	quitChan  chan struct{}
+	color     common.Color
+	power     bool
+	common.SubscriptionProvider
 	sync.RWMutex
 }
 
 func (g *Group) init() {
 	g.Lock()
 	g.devices = make(map[uint64]GenericDevice)
-	g.subscriptions = make(map[string]*common.Subscription)
 	g.quitChan = make(chan struct{})
 	g.Unlock()
 }
@@ -93,18 +92,13 @@ func (g *Group) AddDevice(dev GenericDevice) error {
 		return err
 	}
 
-	if err := g.publish(common.EventNewDevice{Device: dev}); err != nil {
-		return err
-	}
+	g.Notify(common.EventNewDevice{Device: dev})
 
 	return nil
 }
 
 func (g *Group) addDeviceSubscription(dev GenericDevice) error {
-	sub, err := dev.NewSubscription()
-	if err != nil {
-		return err
-	}
+	sub := dev.Subscribe()
 	events := sub.Events()
 
 	go func() {
@@ -145,7 +139,8 @@ func (g *Group) RemoveDevice(dev GenericDevice) error {
 	delete(g.devices, dev.ID())
 	g.Unlock()
 
-	return g.publish(common.EventExpiredDevice{Device: dev})
+	g.Notify(common.EventExpiredDevice{Device: dev})
+	return nil
 }
 
 func (g *Group) GetPower() (bool, error) {
@@ -193,10 +188,7 @@ func (g *Group) getPower(cached bool) (bool, error) {
 	g.RLock()
 	defer g.RUnlock()
 	if lastPower != g.power {
-		err := g.publish(common.EventUpdatePower{Power: g.power})
-		if err != nil {
-			return g.power, err
-		}
+		g.Notify(common.EventUpdatePower{Power: g.power})
 	}
 
 	return g.power, nil
@@ -247,10 +239,7 @@ func (g *Group) getColor(cached bool) (common.Color, error) {
 	g.RLock()
 	defer g.RUnlock()
 	if !common.ColorEqual(lastColor, g.color) {
-		err = g.publish(common.EventUpdateColor{Color: g.color})
-		if err != nil {
-			return g.color, err
-		}
+		g.Notify(common.EventUpdateColor{Color: g.color})
 	}
 
 	return g.color, nil
@@ -375,48 +364,15 @@ func (g *Group) Parse(pkt *packet.Packet) error {
 		g.Unlock()
 
 		if labelUpdate {
-			if err := g.publish(common.EventUpdateLabel{Label: g.GetLabel()}); err != nil {
-				return err
-			}
+			g.Notify(common.EventUpdateLabel{Label: g.GetLabel()})
 		}
 	}
-
-	return nil
-}
-
-// NewSubscription returns a new *common.Subscription for receiving events from
-// this group.
-func (g *Group) NewSubscription() (*common.Subscription, error) {
-	sub := common.NewSubscription(g)
-	g.Lock()
-	g.subscriptions[sub.ID()] = sub
-	g.Unlock()
-	return sub, nil
-}
-
-// CloseSubscription is a callback for handling the closing of subscriptions.
-func (g *Group) CloseSubscription(sub *common.Subscription) error {
-	g.RLock()
-	_, ok := g.subscriptions[sub.ID()]
-	g.RUnlock()
-	if !ok {
-		return common.ErrNotFound
-	}
-	g.Lock()
-	delete(g.subscriptions, sub.ID())
-	g.Unlock()
 
 	return nil
 }
 
 // Close cleans up Group resources
 func (g *Group) Close() error {
-	for _, sub := range g.subscriptions {
-		if err := sub.Close(); err != nil {
-			return err
-		}
-	}
-
 	g.Lock()
 	defer g.Unlock()
 
@@ -428,25 +384,7 @@ func (g *Group) Close() error {
 		close(g.quitChan)
 	}
 
-	return nil
-}
-
-// Pushes an event to subscribers
-func (g *Group) publish(event interface{}) error {
-	g.RLock()
-	subs := make(map[string]*common.Subscription, len(g.subscriptions))
-	for k, sub := range g.subscriptions {
-		subs[k] = sub
-	}
-	g.RUnlock()
-
-	for _, sub := range subs {
-		if err := sub.Write(event); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return g.SubscriptionProvider.Close()
 }
 
 func NewGroup(pkt *packet.Packet) (*Group, error) {

@@ -16,7 +16,7 @@
 	],
 	"BuildConstraints": "!plan9,!netbsd,!openbsd,!dragonfly,!solaris,!nacl",
 	"MainDirsExclude": "vendor",
-	"PackageVersion": "0.5.1",
+	"PackageVersion": "1.0.4",
 	"TaskSettings": {
 		"publish-github": {
 			"body": "",
