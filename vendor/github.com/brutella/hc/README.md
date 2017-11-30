@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/brutella/hc.svg)](https://travis-ci.org/brutella/hc)
 
-[HomeControl][homecontrol] is an implementation of the [HomeKit][homekit] Accessory Protocol (HAP) to create your own HomeKit accessory in [Go](https://golang.org). [HomeKit][homekit] is a set of protocols and libraries to access devices for Home Automation. ~~The actual protocol documentation is only available to MFi members.~~ A non-commercial version of the documentation is now available on the [HomeKit developer website](https://developer.apple.com/homekit/).
+HomeControl is an implementation of the [HomeKit][homekit] Accessory Protocol (HAP) to create your own HomeKit accessory in [Go](https://golang.org). [HomeKit][homekit] is a set of protocols and libraries to access devices for Home Automation. ~~The actual protocol documentation is only available to MFi members.~~ A non-commercial version of the documentation is now available on the [HomeKit developer website](https://developer.apple.com/homekit/).
 
 You can use this library to make existing Home Automation devices HomeKit compatible. I've already developed the following HomeKit bridges with in:
 
@@ -17,13 +17,13 @@ I've developed the [Home][home] app (for iPhone, iPad, Apple Watch) to control H
 
 Once you've setup HomeKit, you can use Siri to interact with your accessories using voice command (*Hey Siri, turn off the lights in the living room*).
 
-[home]: http://selfcoded.com/home/
+[home]: http://hochgatterer.me/home/
 [home-appstore]: http://itunes.apple.com/app/id995994352
 
 ## Features
 
 - Full implementation of the HAP in Go
-- Built-in service announcement via mDNS using [bonjour](http://github.com/oleksandr/bonjour)
+- Built-in service announcement via DNS-SD using [dnssd](http://github.com/brutella/dnssd)
 - Runs on multiple platforms (already in use on Linux and OS X)
 - Documentation: http://godoc.org/github.com/brutella/hc
 
@@ -69,7 +69,7 @@ func main() {
 	}
     
     hc.OnTermination(func(){
-        t.Stop()
+        <-t.Stop()
     })
     
 	t.Start()
@@ -80,11 +80,11 @@ You should change some default values for your own needs
 
 ```go
 info := accessory.Info{
-    Name: "Lamp",
-    SerialNumber: "051AC-23AAM1",
+	Name: "Lamp",
+	SerialNumber: "051AC-23AAM1",
 	Manufacturer: "Apple",
-    Model: "AB",
-    Firmware: "1.0.1",
+	Model: "AB",
+	Firmware: "1.0.1",
 }
 ```
 
@@ -135,11 +135,13 @@ HomeControl uses vendor directories (`vendor/`) to integrate the following libra
 - `github.com/tadglines/go-pkgs/crypto/srp` for *SRP* algorithm
 - `github.com/agl/ed25519` for *ed25519* signature
 - `github.com/gosexy/to` for type conversion
-- `github.com/oleksandr/bonjour` for mDNS
+- `github.com/brutella/dnssd` for DNS service discovery
 
 # Contact
 
 Matthias Hochgatterer
+
+Website: [http://hochgatterer.me](http://hochgatterer.me)
 
 Github: [https://github.com/brutella](https://github.com/brutella/)
 
@@ -148,7 +150,6 @@ Twitter: [https://twitter.com/brutella](https://twitter.com/brutella)
 
 # License
 
-HomeControl is available under a non-commercial license. See the LICENSE file for more info.
+`hc` is available under the Apache License 2.0 license. See the LICENSE file for more info.
 
-[homecontrol]: http://selfcoded.com/homecontrol/
 [homekit]: https://developer.apple.com/homekit/
