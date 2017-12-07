@@ -2,13 +2,14 @@ package main
 
 import (
 	"github.com/brutella/hc"
-    "github.com/brutella/hc/log"
 	"github.com/brutella/hc/accessory"
+	"github.com/brutella/hc/log"
 
 	"time"
 )
 
 func main() {
+	log.Debug.Enable()
 	switchInfo := accessory.Info{
 		Name: "Lamp",
 	}
@@ -45,7 +46,7 @@ func main() {
 	}()
 
 	hc.OnTermination(func() {
-		t.Stop()
+		<-t.Stop()
 	})
 
 	t.Start()

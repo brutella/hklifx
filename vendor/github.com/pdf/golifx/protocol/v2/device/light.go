@@ -54,26 +54,20 @@ func (l *Light) SetState(pkt *packet.Packet) error {
 		l.Lock()
 		l.color = s.Color
 		l.Unlock()
-		if err := l.publish(common.EventUpdateColor{Color: l.color}); err != nil {
-			return err
-		}
+		l.Notify(common.EventUpdateColor{Color: l.color})
 	}
 	if s.Power > 0 != l.CachedPower() {
 		l.Lock()
 		l.power = s.Power
 		l.Unlock()
-		if err := l.publish(common.EventUpdatePower{Power: l.power > 0}); err != nil {
-			return err
-		}
+		l.Notify(common.EventUpdatePower{Power: l.power > 0})
 	}
 	newLabel := stripNull(string(s.Label[:]))
 	if newLabel != l.CachedLabel() {
 		l.Lock()
 		l.label = newLabel
 		l.Unlock()
-		if err := l.publish(common.EventUpdateLabel{Label: l.label}); err != nil {
-			return err
-		}
+		l.Notify(common.EventUpdateLabel{Label: l.label})
 	}
 
 	return nil
@@ -89,6 +83,9 @@ func (l *Light) Get() error {
 
 	common.Log.Debugf("Waiting for light state (%d)", l.id)
 	pktResponse := <-req
+	if pktResponse == nil {
+		return common.ErrProtocol
+	}
 	if pktResponse.Error != nil {
 		return pktResponse.Error
 	}
@@ -128,7 +125,8 @@ func (l *Light) SetColor(color common.Color, duration time.Duration) error {
 	l.Lock()
 	l.color = color
 	l.Unlock()
-	return l.publish(common.EventUpdateColor{Color: l.color})
+	l.Notify(common.EventUpdateColor{Color: l.color})
+	return nil
 }
 
 func (l *Light) GetColor() (common.Color, error) {
@@ -171,5 +169,6 @@ func (l *Light) SetPowerDuration(state bool, duration time.Duration) error {
 	l.Lock()
 	l.power = p.Level
 	l.Unlock()
-	return l.publish(common.EventUpdatePower{Power: l.power > 0})
+	l.Notify(common.EventUpdatePower{Power: l.power > 0})
+	return nil
 }
