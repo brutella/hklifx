@@ -1,6 +1,8 @@
 package common
 
-import "time"
+import (
+	"time"
+)
 
 // Group represents a group of LIFX devices
 type Group interface {

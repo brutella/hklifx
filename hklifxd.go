@@ -48,7 +48,7 @@ func Connect() {
 
 	client.SetDiscoveryInterval(30 * time.Second)
 
-	sub, _ := client.NewSubscription()
+	sub := client.Subscribe()
 	for {
 		event := <-sub.Events()
 		switch event.(type) {
@@ -82,7 +82,7 @@ func NewDevice(device common.Device) {
 	if light, ok := device.(common.Light); ok {
 		hkLight := GetHKLight(light)
 
-		hkLight.sub, _ = light.NewSubscription()
+		hkLight.sub = light.Subscribe()
 		for {
 			event := <-hkLight.sub.Events()
 			switch event.(type) {
@@ -116,7 +116,7 @@ func NewDevice(device common.Device) {
 func ExpireDevice(device common.Device) {
 	if light, ok := device.(common.Light); ok {
 		if hkLight, found := lights[light.ID()]; found == true {
-			light.CloseSubscription(hkLight.sub)
+			hkLight.sub.Close()
 			hkLight.transport.Stop()
 
 			delete(lights, light.ID())

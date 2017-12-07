@@ -108,7 +108,7 @@ func lightList(c *cobra.Command, args []string) {
 
 	table := new(tabwriter.Writer)
 	table.Init(os.Stdout, 0, 4, 4, ' ', 0)
-	fmt.Fprintf(table, fmt.Sprintf("%s\t%s\t%s\t%s\t%s\n", `ID`, `Label`, `Power`, `Color`, `Firmware`))
+	fmt.Fprintf(table, fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%s\n", `ID`, `Label`, `Power`, `Color`, `Firmware`, `Product`))
 
 	for _, l := range lights {
 		label, err := l.GetLabel()
@@ -131,7 +131,12 @@ func lightList(c *cobra.Command, args []string) {
 			logger.WithField(`light-id`, l.ID()).Warnln(`Couldn't get firmware version for light`)
 			continue
 		}
-		fmt.Fprintf(table, "%v\t%s\t%v\t%+v\t%s\n", l.ID(), label, power, color, firmwareVersion)
+		productName, err := l.GetProductName()
+		if err != nil {
+			logger.WithField(`light-id`, l.ID()).Warnln(`Couldn't get product name for light`)
+			continue
+		}
+		fmt.Fprintf(table, "%v\t%s\t%v\t%+v\t%s\t%s\n", l.ID(), label, power, color, firmwareVersion, productName)
 	}
 	fmt.Fprintln(table)
 	if err := table.Flush(); err != nil {
