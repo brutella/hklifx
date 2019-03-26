@@ -273,7 +273,7 @@ func main() {
 
 	hc.OnTermination(func() {
 		for _, light := range lights {
-			light.transport.Stop()
+			<-light.transport.Stop()
 		}
 
 		time.Sleep(100 * time.Millisecond)
