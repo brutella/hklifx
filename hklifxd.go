@@ -28,7 +28,7 @@ const (
 )
 
 type HKLight struct {
-	accessory *accessory.Lightbulb
+	accessory *accessory.ColoredLightbulb
 	transport hc.Transport
 	sub       *common.Subscription
 }
@@ -42,7 +42,7 @@ var (
 func Connect() {
 	client, err := golifx.NewClient(&protocol.V2{Reliable: true})
 	if err != nil {
-		log.Info.Panic("Failed to initiliaze the client: %s", err)
+		log.Info.Panic("Failed to initiliaze the client:", err)
 	}
 
 	client.SetDiscoveryInterval(30 * time.Second)
@@ -139,7 +139,7 @@ func GetHKLight(light common.Light) *HKLight {
 		Manufacturer: "LIFX",
 	}
 
-	acc := accessory.NewLightbulb(info)
+	acc := accessory.NewColoredLightbulb(info)
 
 	power, _ := light.GetPower()
 	acc.Lightbulb.On.SetValue(power)
